@@ -4,5 +4,10 @@
     <string name="app_name">EagleChat</string>
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
+    <string name="title_activity_conversation">ConversationActivity</string>
+    <string name="title_activity_contacts">ContactsActivity</string>
+    <string name="title_activity_add_contact">AddContactActivity</string>
+    <string name="loading">Loading…</string>
+    <string name="empty">You have no contacts. Click the \'add\u00A0contacts\' button in the action bar.</string>
 
 </resources>
