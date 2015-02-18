@@ -20,16 +20,19 @@ public class ContactsActivity extends CompatListActivity implements LoaderManage
     protected void onCreate(Bundle savedInstanceState) {
         Log.d(this.getLocalClassName(), "onCreate called");
         super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_conversation);
 
         ListAdapter adapter = new SimpleCursorAdapter(
                 this,
                 android.R.layout.two_line_list_item,
                 null,
-                new String[]{ContactsTable.COLUMN_NAME, MessageTable.COLUMN_CONTENT},
+                new String[]{ContactsTable.COLUMN_NAME, MessagesTable.COLUMN_CONTENT},
                 new int[]{android.R.id.text1, android.R.id.text2},
                 SimpleCursorAdapter.FLAG_REGISTER_CONTENT_OBSERVER
         );
         setListAdapter(adapter);
+
+        setListShown(false, false);
 
         getLoaderManager().initLoader(0, null, this).forceLoad();
     }
@@ -86,7 +89,7 @@ public class ContactsActivity extends CompatListActivity implements LoaderManage
         return new CursorLoader(this, DatabaseProvider.CONTACTS_WITH_LAST_MESSAGE_URI,
                 new String[]{"contacts._id",
                         ContactsTable.COLUMN_NAME,
-                        MessageTable.COLUMN_CONTENT}, null, null,
+                        MessagesTable.COLUMN_CONTENT}, null, null,
                 ContactsTable.COLUMN_NAME);
     }
 
@@ -98,6 +101,7 @@ public class ContactsActivity extends CompatListActivity implements LoaderManage
         } else {
             ((SimpleCursorAdapter) getListAdapter()).changeCursor(null);
         }
+        setListShown(true, false);
     }
 
     @Override

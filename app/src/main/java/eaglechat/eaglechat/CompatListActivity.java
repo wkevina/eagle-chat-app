@@ -20,9 +20,11 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.support.v7.app.ActionBarActivity;
 import android.view.View;
+import android.view.animation.AnimationUtils;
 import android.widget.AdapterView;
 import android.widget.ListAdapter;
 import android.widget.ListView;
+import android.widget.TextView;
 
 /**
  * An activity that displays a list of items by binding to a data source such as
@@ -174,16 +176,15 @@ import android.widget.ListView;
  * @see android.widget.ListView
  */
 public class CompatListActivity extends ActionBarActivity {
-    /**
-     * This field should be made private, so it is hidden from the SDK.
-     * {@hide}
-     */
-    protected ListAdapter mAdapter;
-    /**
-     * This field should be made private, so it is hidden from the SDK.
-     * {@hide}
-     */
-    protected ListView mList;
+
+    ListAdapter mAdapter;
+    ListView mList;
+    TextView mEmptyView;
+    TextView mStandardEmptyView;
+    View mProgressContainer;
+    View mListContainer;
+    CharSequence mEmptyText;
+    boolean mListShown;
 
     private Handler mHandler = new Handler();
     private boolean mFinishedStart = false;
@@ -238,15 +239,15 @@ public class CompatListActivity extends ActionBarActivity {
     @Override
     public void onSupportContentChanged() {
         super.onSupportContentChanged();
-        View emptyView = findViewById(android.R.id.empty);
+        mEmptyView = (TextView) findViewById(android.R.id.empty);
         mList = (ListView) findViewById(android.R.id.list);
         if (mList == null) {
             throw new RuntimeException(
                     "Your content must have a ListView whose id attribute is " +
                             "'android.R.id.list'");
         }
-        if (emptyView != null) {
-            mList.setEmptyView(emptyView);
+        if (mEmptyView != null) {
+            mList.setEmptyView(mEmptyView);
         }
         mList.setOnItemClickListener(mOnClickListener);
         if (mFinishedStart) {
@@ -254,6 +255,46 @@ public class CompatListActivity extends ActionBarActivity {
         }
         mHandler.post(mRequestFocus);
         mFinishedStart = true;
+
+
+        View root = findViewById(android.R.id.content);
+        if (root == null) {
+            throw new IllegalStateException("Content view not yet created");
+        }
+
+        mProgressContainer = root.findViewById(R.id.progressContainer);
+        mListContainer = root.findViewById(R.id.listContainer);
+
+        mListShown = true;
+        if (mAdapter != null) {
+            ListAdapter adapter = mAdapter;
+            mAdapter = null;
+            setListAdapter(adapter);
+        } else {
+            // We are starting without an adapter, so assume we won't
+            // have our data right away and start with the progress indicator.
+            if (mProgressContainer != null) {
+                setListShown(false, false);
+            }
+        }
+        mHandler.post(mRequestFocus);
+    }
+
+    /**
+     * The default content for a ListFragment has a TextView that can
+     * be shown when the list is empty.  If you would like to have it
+     * shown, call this method to supply the text it should use.
+     */
+    public void setEmptyText(CharSequence text) {
+        ensureList();
+        if (mEmptyView == null) {
+            throw new IllegalStateException("Can't be used with a custom content view");
+        }
+        mEmptyView.setText(text);
+        if (mEmptyText == null) {
+            mList.setEmptyView(mEmptyView);
+        }
+        mEmptyText = text;
     }
 
     /**
@@ -311,7 +352,6 @@ public class CompatListActivity extends ActionBarActivity {
             return;
         }
         setContentView(R.layout.list_content);
-
     }
 
     private AdapterView.OnItemClickListener mOnClickListener = new AdapterView.OnItemClickListener() {
@@ -319,4 +359,40 @@ public class CompatListActivity extends ActionBarActivity {
             onListItemClick((ListView) parent, v, position, id);
         }
     };
+
+    protected void setListShown(boolean shown, boolean animate) {
+        ensureList();
+        if (mProgressContainer == null) {
+            throw new IllegalStateException("Can't be used with a custom content view");
+        }
+        if (mListShown == shown) {
+            return;
+        }
+        mListShown = shown;
+        if (shown) {
+            if (animate) {
+                mProgressContainer.startAnimation(AnimationUtils.loadAnimation(
+                        this, android.R.anim.fade_out));
+                mListContainer.startAnimation(AnimationUtils.loadAnimation(
+                        this, android.R.anim.fade_in));
+            } else {
+                mProgressContainer.clearAnimation();
+                mListContainer.clearAnimation();
+            }
+            mProgressContainer.setVisibility(View.GONE);
+            mListContainer.setVisibility(View.VISIBLE);
+        } else {
+            if (animate) {
+                mProgressContainer.startAnimation(AnimationUtils.loadAnimation(
+                        this, android.R.anim.fade_in));
+                mListContainer.startAnimation(AnimationUtils.loadAnimation(
+                        this, android.R.anim.fade_out));
+            } else {
+                mProgressContainer.clearAnimation();
+                mListContainer.clearAnimation();
+            }
+            mProgressContainer.setVisibility(View.VISIBLE);
+            mListContainer.setVisibility(View.GONE);
+        }
+    }
 }

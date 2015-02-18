@@ -1,0 +1,31 @@
+<FrameLayout
+    style="@android:style/Theme.Dialog"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:minWidth="300dp"
+    android:orientation="horizontal"
+    tools:context="eaglechat.eaglechat.FakeMessageFragment"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/text_message"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:singleLine="false"
+            android:minHeight="48dp"
+            android:layout_weight="1"/>
+
+        <ImageButton
+            android:id="@+id/button_send"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@android:drawable/ic_menu_send"/>
+    </LinearLayout>
+</FrameLayout>
+

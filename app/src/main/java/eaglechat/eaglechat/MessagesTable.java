@@ -6,7 +6,7 @@ import android.util.Log;
 /**
  * Created by kevinward on 2/15/15.
  */
-public class MessageTable {
+public class MessagesTable {
 
     public static final String TABLE_NAME = "message";
     public static final String COLUMN_ID = "_id";
@@ -28,7 +28,7 @@ public class MessageTable {
     }
 
     public static void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        Log.w(MessageTable.class.getName(), "Upgrading database from version "
+        Log.w(MessagesTable.class.getName(), "Upgrading database from version "
                 + oldVersion + " to " + newVersion
                 + ", which will destroy all old data");
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_NAME);

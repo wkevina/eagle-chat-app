@@ -10,4 +10,6 @@
           android:title="Contacts"
           app:showAsAction="ifRoom|withText"
           android:icon="@android:drawable/sym_contact_card"/>
+    <item android:id="@+id/action_fake"
+          android:title="Fake"/>
 </menu>

@@ -1,22 +1,27 @@
 package eaglechat.eaglechat;
 
+import android.app.ActionBar;
 import android.app.LoaderManager;
+import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.CursorLoader;
 import android.content.Intent;
 import android.content.Loader;
 import android.database.Cursor;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
-import android.widget.ImageButton;
-import android.widget.ListAdapter;
+import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.SimpleCursorAdapter;
 import android.widget.TextView;
 
@@ -25,8 +30,8 @@ public class ConversationActivity extends CompatListActivity implements
     public static final String TAG = "ConversationActivity";
     public static final String CONTACT_ID = TAG + ".CONTACT_ID";
 
-    private static final int MESSAGES_LOADER = 0;
-    private static final int CONTACTS_LOADER = 1;
+    private static final int MESSAGES_LOADER = 1;
+    private static final int CONTACTS_LOADER = 2;
 
     private static final String
             NO_CONTENT_STRING = "There are no messages between you and this contact. " +
@@ -34,6 +39,8 @@ public class ConversationActivity extends CompatListActivity implements
     private EditText mTextMessage;
 
     private long mContactId;
+
+    private String mContactName;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,25 +50,44 @@ public class ConversationActivity extends CompatListActivity implements
         Bundle bundle = getIntent().getExtras();
         if (bundle != null) {
             mContactId = bundle.getLong(CONTACT_ID, 0);
-            Log.d(getLocalClassName(), String.format("Contact id=%d", mContactId));
+            Log.d(getPackageName(), String.format("Contact id=%d", mContactId));
         }
 
-        ListAdapter adapter = new SimpleCursorAdapter(
+        MessagesCursorAdapter adapter = new MessagesCursorAdapter(
                 this,
-                android.R.layout.two_line_list_item,
+                R.layout.right_message_item,
+                R.layout.left_message_item,
                 null,
-                new String[]{MessageTable.COLUMN_SENDER, MessageTable.COLUMN_CONTENT},
-                new int[]{android.R.id.text1, android.R.id.text2},
+                new String[]{MessagesTable.COLUMN_CONTENT},
+                new int[]{android.R.id.text2},
+                MessagesTable.COLUMN_SENDER,
                 SimpleCursorAdapter.FLAG_REGISTER_CONTENT_OBSERVER
         );
+        adapter.setViewBinder(new SimpleCursorAdapter.ViewBinder() {
+            @Override
+            public boolean setViewValue(View view, Cursor cursor, int columnIndex) {
+                int nameColumn = cursor.getColumnIndex(MessagesTable.COLUMN_SENDER);
+                if (columnIndex != nameColumn) {
+                    return false;
+                }
+                long senderId = cursor.getLong(columnIndex);
+                if (senderId == 0) {
+                    view.setVisibility(View.GONE);
+                    return true;
+                }
+                ((TextView) view).setText(mContactName);
+                return true;
+            }
+        });
         setListAdapter(adapter);
 
-        TextView emptyText = (TextView) findViewById(android.R.id.empty);
-        if (emptyText != null) {
-            emptyText.setText(NO_CONTENT_STRING);
-        }
+        getListView().setDivider(null);
+        getListView().setDividerHeight(0);
 
-        getLoaderManager().initLoader(MESSAGES_LOADER, null, this);
+        setEmptyText(NO_CONTENT_STRING);
+        setListShown(false, false);
+
+        getLoaderManager().initLoader(CONTACTS_LOADER, null, this);
 
         mTextMessage = (EditText) findViewById(R.id.text_message);
         findViewById(R.id.button_send).setOnClickListener(new View.OnClickListener() {
@@ -70,24 +96,6 @@ public class ConversationActivity extends CompatListActivity implements
                 sendMessage();
             }
         });
-
-        /*
-        MatrixCursor cursor = new MatrixCursor(new String[]{"_id", "SENDER", "MESSAGE"});
-
-        ListAdapter adapter = new SimpleCursorAdapter(
-                this,
-                android.R.layout.two_line_list_item,
-                cursor,
-                new String[]{"SENDER", "MESSAGE"},
-                new int[]{android.R.id.text1, android.R.id.text2},
-                SimpleCursorAdapter.FLAG_REGISTER_CONTENT_OBSERVER
-        );
-        setListAdapter(adapter);
-
-        for (int i = 1; i < 25; ++i) {
-            cursor.addRow(new Object[]{i, "me", "this is a message " + Integer.toString(i)});
-        }
-        */
     }
 
     private void sendMessage() {
@@ -97,17 +105,20 @@ public class ConversationActivity extends CompatListActivity implements
                 @Override
                 protected Void doInBackground(Void... params) {
                     ContentValues values = new ContentValues();
-                    values.put(MessageTable.COLUMN_RECEIVER, mContactId);
-                    values.put(MessageTable.COLUMN_SENDER, 0);
-                    values.put(MessageTable.COLUMN_CONTENT, message);
-                    getContentResolver().insert(DatabaseProvider.MESSAGE_URI, values);
+                    values.put(MessagesTable.COLUMN_RECEIVER, mContactId);
+                    values.put(MessagesTable.COLUMN_SENDER, 0);
+                    values.put(MessagesTable.COLUMN_CONTENT, message);
+                    getContentResolver().insert(DatabaseProvider.MESSAGES_URI, values);
                     return null;
                 }
             }.execute();
             mTextMessage.setText("");
         }
-        InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
-        imm.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(), 0);
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        View focused = getCurrentFocus();
+        if (focused != null) {
+            imm.hideSoftInputFromWindow(focused.getWindowToken(), 0);
+        }
     }
 
 
@@ -131,6 +142,9 @@ public class ConversationActivity extends CompatListActivity implements
             case R.id.action_contacts:
                 handleLaunchContactsActivity();
                 break;
+            case R.id.action_fake:
+                FakeMessageFragment.newInstance(mContactId).show(getSupportFragmentManager(), "fake");
+                break;
             default:
                 break;
         }
@@ -145,26 +159,139 @@ public class ConversationActivity extends CompatListActivity implements
 
     @Override
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
-        Log.d(getLocalClassName(), "onCreateLoader called");
-        return new CursorLoader(this, DatabaseProvider.MESSAGE_URI, null,
-                MessageTable.COLUMN_RECEIVER +" = ? OR "+ MessageTable.COLUMN_SENDER + " = ?",
-                new String[] {String.valueOf(mContactId), String.valueOf(mContactId)},
-                MessageTable.COLUMN_ID);
+        Log.d(getPackageName(), "onCreateLoader called");
+        Log.d(getPackageName(), String.format("Loader id=%d", id));
+
+        if (id == MESSAGES_LOADER) { // Load the messages related cursor
+            // Append the contact Id to the URI for messages filtered by contact
+            Uri uri = ContentUris.withAppendedId(DatabaseProvider.MESSAGES_FROM_CONTACT_URI, mContactId);
+
+            // The columns we want to return
+            String[] projection = new String[]{
+                    MessagesTable.COLUMN_ID,
+                    MessagesTable.COLUMN_SENDER,
+                    MessagesTable.COLUMN_CONTENT
+            };
+
+            return new CursorLoader(this, uri, projection, null, null, MessagesTable.COLUMN_ID);
+        } else if (id == CONTACTS_LOADER) { // Load the contacts cursor
+            // Uri to get our contact
+            Uri uri = ContentUris.withAppendedId(DatabaseProvider.CONTACTS_URI, mContactId);
+
+            String[] projection = new String[]{
+                    ContactsTable.COLUMN_ID,
+                    ContactsTable.COLUMN_NAME
+            };
+
+            return new CursorLoader(this, uri, projection, null, null, null);
+        }
+        return null;
     }
 
     @Override
     public void onLoadFinished(Loader<Cursor> loader, Cursor data) {
-        Log.d(getLocalClassName(), "onLoadFinished called");
-        if (data.getCount() > 0) {
-            ((SimpleCursorAdapter) getListAdapter()).changeCursor(data);
-        } else {
-            ((SimpleCursorAdapter) getListAdapter()).changeCursor(null);
+        Log.d(getPackageName(), "onLoadFinished called");
+        if (loader.getId() == MESSAGES_LOADER) {
+            if (data.getCount() > 0) {
+                ((SimpleCursorAdapter) getListAdapter()).changeCursor(data);
+
+                ListView listView = getListView();
+                SimpleCursorAdapter adapter = (SimpleCursorAdapter) getListAdapter();
+
+                listView.requestFocus();
+                listView.setSelection(adapter.getCount());
+            } else {
+                ((SimpleCursorAdapter) getListAdapter()).changeCursor(null);
+            }
+            setListShown(true, false);
+        } else if (loader.getId() == CONTACTS_LOADER) {
+            if (data.getCount() > 0) {
+                data.moveToFirst();
+                int name_column = data.getColumnIndex(ContactsTable.COLUMN_NAME);
+                String name = data.getString(name_column);
+                mContactName = name;
+                getSupportActionBar().setTitle(mContactName);
+                /* Now that we have our contact's name, start the messages loader */
+                getLoaderManager().initLoader(MESSAGES_LOADER, null, this);
+            }
         }
     }
 
     @Override
     public void onLoaderReset(Loader<Cursor> loader) {
-        Log.d(getLocalClassName(), "onLoaderReset called");
+        Log.d(getPackageName(), "onLoaderReset called");
         ((SimpleCursorAdapter) getListAdapter()).changeCursor(null);
+    }
+
+    public static class MessagesCursorAdapter extends SimpleCursorAdapter {
+        private int mLayoutMine, mLayoutTheirs;
+        private Context mContext;
+        LayoutInflater mInflater;
+        private String mSelectionColumn;
+
+        public MessagesCursorAdapter(Context context, int layout, Cursor c, String[] from, int[] to, int flags) {
+            this(context, layout, layout, c, from, to, null, flags);
+        }
+
+        public MessagesCursorAdapter(Context context, int layoutMine, int layoutTheirs, Cursor c, String[] from, int[] to, String selectionColumn, int flags) {
+            super(context, layoutMine, c, from, to, flags);
+            mLayoutMine = layoutMine;
+            mLayoutTheirs = layoutTheirs;
+            mInflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+            mSelectionColumn = selectionColumn;
+            mContext = context;
+        }
+
+        @Override
+        public int getViewTypeCount() {
+            return mSelectionColumn == null ? 1 : 2;
+        }
+
+        @Override
+        public int getItemViewType(int position) {
+            if (mSelectionColumn == null) {
+                return 0;
+            }
+            Cursor c = getCursor();
+            int selectionColumn = c.getColumnIndex(mSelectionColumn);
+            c.moveToPosition(position);
+            long selectionId = c.getLong(selectionColumn);
+            return selectionId == 0 ? 0 : 1;
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+            if (!getCursor().moveToPosition(position)) {
+                throw new IllegalStateException("couldn't move cursor to position " + position);
+            }
+            View v;
+            if (convertView == null) {
+                v = newView(mContext, getCursor(), parent);
+            } else {
+                v = convertView;
+            }
+            bindView(v, mContext, getCursor());
+            return v;
+        }
+
+        @Override
+        public View newView(Context context, Cursor cursor, ViewGroup parent) {
+            // Support parent's behavior
+            if (mSelectionColumn == null)
+                return super.newView(context, cursor, parent);
+            else {
+                int selectionColumn = cursor.getColumnIndex(mSelectionColumn);
+                long selectionId = cursor.getLong(selectionColumn);
+                View v;
+                if (selectionId == 0) {
+                    v = mInflater.inflate(mLayoutMine, parent, false);
+                    v.setTag("ME");
+                } else {
+                    v = mInflater.inflate(mLayoutTheirs, parent, false);
+                    v.setTag("YOU");
+                }
+                return v;
+            }
+        }
     }
 }
