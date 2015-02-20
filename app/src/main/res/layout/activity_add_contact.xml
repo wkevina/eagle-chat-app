@@ -21,46 +21,52 @@
         android:inputType="textPersonName"
         android:singleLine="true"/>
 
-    <TextView
-        android:text="Network ID:"
+    <LinearLayout
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"/>
-
-    <EditText
-        android:id="@+id/text_id"
-        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:inputType="number"
-        android:singleLine="true"/>
+        android:orientation="horizontal">
 
-    <TextView
-        android:text="Public key:"
+        <TextView
+            android:text="Network ID:"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingRight="5dp"
+            android:paddingEnd="5dp"/>
+
+        <EditText
+            android:id="@+id/text_id"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="number"
+            android:minEms="4"
+            android:singleLine="true"/>
+    </LinearLayout>
+
+    <!--
+        <TextView
+            android:text="Public key:"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+
+        <EditText
+            android:id="@+id/text_key"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="number"
+            android:singleLine="true"/>
+    -->
+    <Button
+        android:id="@+id/button_scan"
+        android:text="Scan QR code"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"/>
-
-    <EditText
-        android:id="@+id/text_key"
-        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:inputType="number"
-        android:singleLine="true"/>
+        android:layout_gravity="center"/>
 
     <Button
         android:id="@+id/button_submit"
         android:drawableRight="@drawable/ic_done_black_24dp"
         android:text="Done"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"/>
-
-    <Button
-        android:id="@+id/button_scan"
-        android:text="Scan"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"/>
-
-    <TextView
-        android:textStyle="bold"
-        android:id="@+id/qr_output"
+        android:layout_gravity="center"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"/>
 

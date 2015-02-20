@@ -22,7 +22,7 @@ import org.spongycastle.util.encoders.Base64;
 
 public class AddContactActivity extends ActionBarActivity {
 
-    EditText mNameText, mNetworkIdText, mKeyText;
+    EditText mNameText, mNetworkIdText;
     TextView mFingerPrint;
     Button mSubmitButton, mScanButton;
 
@@ -33,8 +33,6 @@ public class AddContactActivity extends ActionBarActivity {
 
         mNameText = (EditText) findViewById(R.id.text_name);
         mNetworkIdText = (EditText) findViewById(R.id.text_id);
-        mKeyText = (EditText) findViewById(R.id.text_key);
-        mFingerPrint = (TextView) findViewById(R.id.qr_output);
 
         mSubmitButton = (Button) findViewById(R.id.button_submit);
         mScanButton = (Button) findViewById(R.id.button_scan);
@@ -95,8 +93,7 @@ public class AddContactActivity extends ActionBarActivity {
         }
 
         mNetworkIdText.setText(Config.bytesToString(networkId, ""));
-        mFingerPrint.setText(Config.getFingerPrint(publicKey, networkId));
-        mKeyText.setText(Config.bytesToString(publicKey, ""));
+        mScanButton.setText("Fingerprint: " + Config.getFingerPrint(publicKey, networkId));
     }
 
     private void submit() {
