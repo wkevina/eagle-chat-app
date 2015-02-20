@@ -21,7 +21,6 @@ import org.spongycastle.util.encoders.Base64;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -79,7 +78,7 @@ public class MyDetailsActivity extends ActionBarActivity {
             s.append(String.format("%02x%s", b, separator));
         }
         if (!separator.isEmpty()) {
-            s.deleteCharAt(s.length()-1); // delete the last separator character
+            s.deleteCharAt(s.length() - 1); // delete the last separator character
         }
 
         return s.toString();
@@ -120,7 +119,7 @@ public class MyDetailsActivity extends ActionBarActivity {
         try {
             Map<EncodeHintType, Object> hints = new HashMap<>();
             hints.put(EncodeHintType.MARGIN, MARGIN);
-            hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.H);
+            hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.M);
             bits = writer.encode(dataString, BarcodeFormat.QR_CODE, CODE_SIZE, CODE_SIZE, hints);
         } catch (WriterException ex) {
             return;
@@ -147,7 +146,7 @@ public class MyDetailsActivity extends ActionBarActivity {
         Bitmap bitmap = Bitmap.createBitmap(bits.getWidth(), bits.getHeight(), Bitmap.Config.RGB_565);
         for (int x = 0; x < bits.getWidth(); ++x) {
             for (int y = 0; y < bits.getHeight(); ++y) {
-                bitmap.setPixel(x, y, bits.get(x, y) ? Color.WHITE : Color.BLACK);
+                bitmap.setPixel(x, y, bits.get(x, y) ? Color.BLACK : Color.WHITE);
             }
         }
         return bitmap;
