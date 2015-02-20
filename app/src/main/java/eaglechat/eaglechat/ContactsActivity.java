@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.Loader;
 import android.database.Cursor;
 import android.os.Bundle;
+import android.support.v4.app.NavUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -63,6 +64,10 @@ public class ContactsActivity extends CompatListActivity implements LoaderManage
                 return handleLaunchAddContactsActivity();
             case R.id.action_burn:
                 getContentResolver().delete(DatabaseProvider.DELETE_URI, null, null);
+                Intent intent = new Intent(this, ContactsActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK|Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+                finish();
                 return true;
         }
 
