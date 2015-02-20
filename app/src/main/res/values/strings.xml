@@ -9,5 +9,8 @@
     <string name="title_activity_add_contact">Add a contact</string>
     <string name="loading">Loading…</string>
     <string name="empty">You have no contacts. Click the \'add\u00A0contacts\' button in the action bar.</string>
+    <string name="label_add_contact">Add Contact</string>
+    <string name="label_burn">BURN</string>
+    <string name="abc_send_message_description">Send message</string>
 
 </resources>

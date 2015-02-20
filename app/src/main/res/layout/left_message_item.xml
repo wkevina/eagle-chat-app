@@ -9,7 +9,7 @@
         android:paddingTop="4dp"
         android:paddingRight="4dp"
         android:paddingBottom="4dp"
-        android:background="?attr/colorAccent"
+        android:background="@drawable/item_background_left"
         android:textColor="@color/bright_foreground_inverse_material_light"
         android:text="Message"
         android:layout_gravity="left"

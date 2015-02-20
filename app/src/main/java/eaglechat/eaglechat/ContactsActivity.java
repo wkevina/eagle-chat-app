@@ -20,7 +20,7 @@ public class ContactsActivity extends CompatListActivity implements LoaderManage
     protected void onCreate(Bundle savedInstanceState) {
         Log.d(this.getLocalClassName(), "onCreate called");
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_conversation);
+        setContentView(R.layout.activity_contacts);
 
         ListAdapter adapter = new SimpleCursorAdapter(
                 this,

@@ -9,9 +9,9 @@
         app:showAsAction="never"/>
     <item
         android:id="@+id/action_add_contact"
-        android:title="Add Contact"
-        android:icon="@android:drawable/ic_input_add"
-        app:showAsAction="always"/>
+        android:title="@string/label_add_contact"
+        android:icon="@drawable/ic_add_white_48dp"
+        app:showAsAction="ifRoom|withText"/>
     <item android:id="@+id/action_burn"
-          android:title="BURN IT!"/>
+          android:title="@string/label_burn"/>
 </menu>

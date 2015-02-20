@@ -36,7 +36,8 @@
 
     <Button
         android:id="@+id/button_submit"
-        android:text="Submit"
+        android:drawableRight="@drawable/ic_done_black_24dp"
+        android:text="Done"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@id/text_id"

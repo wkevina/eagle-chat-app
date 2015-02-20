@@ -16,6 +16,11 @@
 
     </LinearLayout>
 
+    <View
+        android:layout_height="1dp"
+        android:layout_width="match_parent"
+        android:background="?attr/dividerHorizontal"/>
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -27,13 +32,20 @@
             android:layout_height="wrap_content"
             android:singleLine="false"
             android:minHeight="48dp"
+            android:layout_gravity="bottom"
             android:layout_weight="1"/>
+
         <ImageButton
+            android:contentDescription="@string/abc_send_message_description"
             android:id="@+id/button_send"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:src="@android:drawable/ic_menu_send"/>
+            android:src="@drawable/ic_send_black_36dp"/>
     </LinearLayout>
 
 
 </LinearLayout>
+
+    <!--    android:background="?attr/selectableItemBackgroundBorderless"
+                 android:padding="@dimen/abc_action_bar_default_padding_material"
+    -->

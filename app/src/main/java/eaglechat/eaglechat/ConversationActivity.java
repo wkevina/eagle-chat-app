@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.CursorLoader;
 import android.content.Intent;
 import android.content.Loader;
+import android.content.res.Configuration;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -83,6 +84,7 @@ public class ConversationActivity extends CompatListActivity implements
 
         getListView().setDivider(null);
         getListView().setDividerHeight(0);
+        getListView().setVerticalScrollBarEnabled(false);
 
         setEmptyText(NO_CONTENT_STRING);
         setListShown(false, false);
@@ -155,6 +157,11 @@ public class ConversationActivity extends CompatListActivity implements
     private void handleLaunchContactsActivity() {
         Intent actionIntent = new Intent(this, ContactsActivity.class);
         startActivity(actionIntent);
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        Log.d(getPackageName(), newConfig.toString());
     }
 
     @Override

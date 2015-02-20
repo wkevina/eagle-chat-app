@@ -9,7 +9,7 @@
     <item android:id="@+id/action_contacts"
           android:title="Contacts"
           app:showAsAction="ifRoom|withText"
-          android:icon="@android:drawable/sym_contact_card"/>
+          android:icon="@drawable/ic_contacts_white_48dp"/>
     <item android:id="@+id/action_fake"
           android:title="Fake"/>
 </menu>
