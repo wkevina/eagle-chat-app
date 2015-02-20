@@ -1,40 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          package="eaglechat.eaglechat">
+    package="eaglechat.eaglechat" >
 
     <application
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
-        android:theme="@style/AppTheme">
+        android:theme="@style/AppTheme" >
         <activity
             android:name=".MainActivity"
-            android:label="@string/app_name">
+            android:label="@string/app_name" >
             <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
+                <action android:name="android.intent.action.MAIN" />
 
-                <category android:name="android.intent.category.LAUNCHER"/>
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
         <activity
             android:name=".ConversationActivity"
             android:label="@string/title_activity_conversation"
-            android:parentActivityName=".ContactsActivity">
+            android:parentActivityName=".ContactsActivity" >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value="eaglechat.eaglechat.ContactsActivity"/>
+                android:value="eaglechat.eaglechat.ContactsActivity" />
         </activity>
         <activity
             android:name=".ContactsActivity"
-            android:label="@string/title_activity_contacts">
+            android:label="@string/title_activity_contacts" >
         </activity>
         <activity
             android:name=".AddContactActivity"
             android:label="@string/title_activity_add_contact"
-            android:parentActivityName=".ContactsActivity">
+            android:parentActivityName=".ContactsActivity" >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value="eaglechat.eaglechat.ContactsActivity"/>
+                android:value="eaglechat.eaglechat.ContactsActivity" />
         </activity>
 
         <provider
@@ -42,8 +42,19 @@
             android:authorities="eaglechat.eaglechat.provider"
             android:enabled="true"
             android:exported="false"
-            android:grantUriPermissions="false">
+            android:grantUriPermissions="false" >
         </provider>
+
+        <activity
+            android:name=".MyDetailsActivity"
+            android:label="@string/title_activity_my_details"
+            android:windowSoftInputMode="stateUnchanged"
+            android:enabled="true"
+            android:parentActivityName=".ContactsActivity" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="eaglechat.eaglechat.ContactsActivity" />
+        </activity>
     </application>
 
 </manifest>

@@ -2,12 +2,16 @@ package eaglechat.eaglechat;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
+import org.spongycastle.util.encoders.Base64;
+
 import java.security.Provider;
+import java.security.SecureRandom;
 import java.security.Security;
 import java.util.Iterator;
 import java.util.Set;
@@ -16,16 +20,19 @@ import java.util.TreeSet;
 public class MainActivity extends Activity {
     private final int STATE_LAUNCH_LIST_ACTIVITY = 0;
     private final int STATE_LAUNCH_CONTACTS_ACTIVITY = 1;
+    private final int STATE_LAUNCH_DETAILS_ACTIVITY = 2;
 
-    private int mState = STATE_LAUNCH_CONTACTS_ACTIVITY;
+    private int mState = 0;
 
-    /*static {
+    static {
         Security.insertProviderAt(new org.spongycastle.jce.provider.BouncyCastleProvider(), 1);
     }
-    */
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        mState = determineState();
 
         switch (mState) {
             case STATE_LAUNCH_LIST_ACTIVITY:
@@ -33,12 +40,36 @@ public class MainActivity extends Activity {
                 break;
             case STATE_LAUNCH_CONTACTS_ACTIVITY:
                 handleLaunchContactsActivity();
+                break;
+            case STATE_LAUNCH_DETAILS_ACTIVITY:
+                handleLaunchDetailsActivity();
+                break;
             default:
                 finish();
                 break;
         }
+    }
 
+    private int determineState() {
+        SharedPreferences prefs = getSharedPreferences(getString(R.string.shared_prefs_file), MODE_PRIVATE);
+        boolean setup = prefs.contains(Config.PUBLIC_KEY) && prefs.contains(Config.NETWORK_ID);
 
+        if (!setup) {
+            byte[] publicKey = new byte[32];
+            byte[] networkId = new byte[2];
+            SecureRandom r = new SecureRandom(new byte[]{0x10, 0x02, 0x03, 0x04});
+            r.nextBytes(publicKey);
+            r.nextBytes(networkId);
+
+            SharedPreferences.Editor editor = prefs.edit();
+
+            editor.clear()
+                    .putString(Config.PUBLIC_KEY, Base64.toBase64String(publicKey))
+                    .putString(Config.NETWORK_ID, Base64.toBase64String(networkId))
+                .apply();
+        }
+
+        return STATE_LAUNCH_CONTACTS_ACTIVITY;
     }
 
     private void handleLaunchContactsActivity() {
@@ -49,6 +80,16 @@ public class MainActivity extends Activity {
 
     private void handleLaunchListActivity() {
         Intent activityIntent = new Intent(this, ConversationActivity.class);
+        startActivity(activityIntent);
+        finish();
+    }
+
+    private void handleLaunchDetailsActivity() {
+        SharedPreferences prefs = getSharedPreferences(getString(R.string.shared_prefs_file), MODE_PRIVATE);
+        Intent activityIntent = new Intent(this, MyDetailsActivity.class);
+        activityIntent.putExtra(Config.PUBLIC_KEY, Base64.decode(prefs.getString(Config.PUBLIC_KEY, "")));
+        activityIntent.putExtra(Config.NETWORK_ID, Base64.decode(prefs.getString(Config.NETWORK_ID, "")));
+
         startActivity(activityIntent);
         finish();
     }

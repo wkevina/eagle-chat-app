@@ -4,6 +4,7 @@ import android.app.LoaderManager;
 import android.content.CursorLoader;
 import android.content.Intent;
 import android.content.Loader;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.support.v4.app.NavUtils;
@@ -14,6 +15,8 @@ import android.view.View;
 import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.SimpleCursorAdapter;
+
+import org.spongycastle.util.encoders.Base64;
 
 
 public class ContactsActivity extends CompatListActivity implements LoaderManager.LoaderCallbacks<Cursor> {
@@ -63,12 +66,23 @@ public class ContactsActivity extends CompatListActivity implements LoaderManage
             case R.id.action_add_contact:
                 return handleLaunchAddContactsActivity();
             case R.id.action_burn:
+                SharedPreferences.Editor editor =
+                        getSharedPreferences(getString(R.string.shared_prefs_file), MODE_PRIVATE)
+                                .edit();
+
+                editor.clear().commit();
                 getContentResolver().delete(DatabaseProvider.DELETE_URI, null, null);
-                Intent intent = new Intent(this, ContactsActivity.class);
+                Intent intent = new Intent(this, MainActivity.class);
                 intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK|Intent.FLAG_ACTIVITY_NEW_TASK);
                 startActivity(intent);
                 finish();
                 return true;
+            case R.id.action_my_details:
+                SharedPreferences prefs = getSharedPreferences(getString(R.string.shared_prefs_file), MODE_PRIVATE);
+                Intent activityIntent = new Intent(this, MyDetailsActivity.class);
+                activityIntent.putExtra(Config.PUBLIC_KEY, Base64.decode(prefs.getString(Config.PUBLIC_KEY, "")));
+                activityIntent.putExtra(Config.NETWORK_ID, Base64.decode(prefs.getString(Config.NETWORK_ID, "")));
+                startActivity(activityIntent);
         }
 
         return super.onOptionsItemSelected(item);
