@@ -24,9 +24,10 @@ import org.spongycastle.util.encoders.Base64;
 public class AddContactActivity extends ActionBarActivity {
 
     EditText mNameText, mNetworkIdText;
-    TextView mFingerPrint;
     Button mScanButton;
     FloatingActionButton mSubmitButton;
+
+    String mPublicKey;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -83,19 +84,20 @@ public class AddContactActivity extends ActionBarActivity {
             return;
         }
         byte[] networkId = Base64.decode(chunks[1]); // Decode the network ID from chunk #2
-        byte[] publicKey = Base64.decode(chunks[2]); // Decode the public key from chunk #3
+        byte[] publicKeyBytes = Base64.decode(chunks[2]); // Decode the public key from chunk #3
 
         if (networkId.length != 2) {
             Toast.makeText(this, "Invalid code", Toast.LENGTH_LONG).show();
             return;
         }
-        if (publicKey.length != 32) {
+        if (publicKeyBytes.length != 32) {
             Toast.makeText(this, "Invalid code", Toast.LENGTH_LONG).show();
             return;
         }
+        mPublicKey = Base64.toBase64String(publicKeyBytes);
 
         mNetworkIdText.setText(Config.bytesToString(networkId, ""));
-        mScanButton.setText("Fingerprint: " + Config.getFingerPrint(publicKey, networkId));
+        mScanButton.setText("Fingerprint: " + Config.getFingerPrint(publicKeyBytes, networkId));
     }
 
     private void submit() {
@@ -112,17 +114,22 @@ public class AddContactActivity extends ActionBarActivity {
             mNetworkIdText.setError("Enter network ID");
             doesValidate = false;
         }
+        if (mPublicKey.isEmpty()) {
+            Toast.makeText(this, "Invalid public key", Toast.LENGTH_LONG).show();
+            doesValidate = false;
+        }
         if (doesValidate == false) {
             Log.d(this.getLocalClassName(), "Some fields are missing. Cannot continue.");
         } else {
-            addContact(networkId, contactName);
+            addContact(networkId, contactName, mPublicKey);
         }
     }
 
-    private void addContact(String networkId, String contactName) {
+    private void addContact(String networkId, String contactName, String publicKey) {
         ContentValues values = new ContentValues();
         values.put(ContactsTable.COLUMN_NETWORK_ID, networkId);
         values.put(ContactsTable.COLUMN_NAME, contactName);
+        values.put(ContactsTable.COLUMN_PUBLIC_KEY, mPublicKey);
         getContentResolver().insert(DatabaseProvider.CONTACTS_URI, values);
         finish();
     }
@@ -148,7 +155,6 @@ public class AddContactActivity extends ActionBarActivity {
                 finish();
                 return true;
             case R.id.action_my_details:
-                Log.d(getPackageName(), "My details clicked");
                 MyDetailsActivity.Util.launchMyDetailsActivity(this);
                 return true;
         }
