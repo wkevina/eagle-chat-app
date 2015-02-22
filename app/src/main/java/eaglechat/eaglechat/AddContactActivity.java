@@ -10,12 +10,14 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.common.collect.ImmutableList;
 import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
+import com.melnykov.fab.FloatingActionButton;
 
 import org.spongycastle.util.encoders.Base64;
 
@@ -24,7 +26,8 @@ public class AddContactActivity extends ActionBarActivity {
 
     EditText mNameText, mNetworkIdText;
     TextView mFingerPrint;
-    Button mSubmitButton, mScanButton;
+    Button mScanButton;
+    FloatingActionButton mSubmitButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -34,7 +37,7 @@ public class AddContactActivity extends ActionBarActivity {
         mNameText = (EditText) findViewById(R.id.text_name);
         mNetworkIdText = (EditText) findViewById(R.id.text_id);
 
-        mSubmitButton = (Button) findViewById(R.id.button_submit);
+        mSubmitButton = (FloatingActionButton) findViewById(R.id.button_submit);
         mScanButton = (Button) findViewById(R.id.button_scan);
 
         mSubmitButton.setOnClickListener(new View.OnClickListener() {

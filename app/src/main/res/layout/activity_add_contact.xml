@@ -1,16 +1,19 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
               xmlns:tools="http://schemas.android.com/tools"
+              xmlns:fab="http://schemas.android.com/apk/res-auto"
               android:layout_width="match_parent"
               android:layout_height="match_parent"
               android:paddingLeft="@dimen/activity_horizontal_margin"
-              android:paddingRight="@dimen/activity_horizontal_margin"
               android:paddingTop="@dimen/activity_vertical_margin"
-              android:paddingBottom="@dimen/activity_vertical_margin"
               android:orientation="vertical"
+              android:background="@color/background_material_light"
               tools:context="eaglechat.eaglechat.AddContactActivity">
 
+
     <TextView
-        android:text="Contact name:"
+        android:paddingRight="5dp"
+        android:paddingEnd="5dp"
+        android:text="@string/label_contactName"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"/>
 
@@ -18,56 +21,54 @@
         android:id="@+id/text_name"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:inputType="textPersonName"
-        android:singleLine="true"/>
+        android:inputType="textPersonName|textCapWords"
+        android:singleLine="true"
+        android:layout_marginEnd="@dimen/activity_horizontal_margin"
+        android:layout_marginRight="@dimen/activity_horizontal_margin"/>
 
-    <LinearLayout
+    <TextView
+        android:text="@string/label_networkId"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:orientation="horizontal">
+        android:paddingRight="5dp"
+        android:paddingEnd="5dp"/>
 
-        <TextView
-            android:text="Network ID:"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:paddingRight="5dp"
-            android:paddingEnd="5dp"/>
+    <EditText
+        android:id="@+id/text_id"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:inputType="number"
+        android:minEms="4"
+        android:maxEms="4"
+        android:singleLine="true"/>
 
-        <EditText
-            android:id="@+id/text_id"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="number"
-            android:minEms="4"
-            android:singleLine="true"/>
-    </LinearLayout>
-
-    <!--
-        <TextView
-            android:text="Public key:"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
-
-        <EditText
-            android:id="@+id/text_key"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="number"
-            android:singleLine="true"/>
-    -->
     <Button
         android:id="@+id/button_scan"
-        android:text="Scan QR code"
+        android:text="@string/action_scan"
+        android:elevation="2dp"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"/>
 
-    <Button
-        android:id="@+id/button_submit"
-        android:drawableRight="@drawable/ic_done_black_24dp"
-        android:text="Done"
-        android:layout_gravity="center"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"/>
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <com.melnykov.fab.FloatingActionButton
+            android:id="@+id/button_submit"
+            android:elevation="2dp"
+            android:src="@drawable/ic_done_white_24dp"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentEnd="true"
+            android:layout_marginRight="@dimen/activity_horizontal_margin"
+            android:layout_marginEnd="@dimen/activity_horizontal_margin"
+            android:layout_marginBottom="@dimen/activity_vertical_margin"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            fab:fab_colorNormal="@color/colorPrimary"
+            fab:fab_colorPressed="@color/colorPrimaryDark"/>
+
+    </RelativeLayout>
 
 </LinearLayout>

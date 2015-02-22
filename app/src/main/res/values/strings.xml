@@ -17,4 +17,7 @@
     <string name="label_network_id">My network ID:</string>
     <string name="label_public_key">My public key</string>
     <string name="shared_prefs_file">eaglechat.eaglechat.SharedPreferences</string>
+    <string name="label_networkId">Network ID:</string>
+    <string name="label_contactName">Name:</string>
+    <string name="action_scan">Scan QR code</string>
 </resources>
