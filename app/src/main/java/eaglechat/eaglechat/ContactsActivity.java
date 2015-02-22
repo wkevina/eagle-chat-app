@@ -7,7 +7,6 @@ import android.content.Loader;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.os.Bundle;
-import android.support.v4.app.NavUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -16,15 +15,26 @@ import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.SimpleCursorAdapter;
 
-import org.spongycastle.util.encoders.Base64;
+import com.melnykov.fab.FloatingActionButton;
 
 
 public class ContactsActivity extends CompatListActivity implements LoaderManager.LoaderCallbacks<Cursor> {
+
+    FloatingActionButton mAddButton;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         Log.d(this.getLocalClassName(), "onCreate called");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_contacts);
+
+        mAddButton = (FloatingActionButton) findViewById(R.id.action_add_contact);
+        mAddButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                handleLaunchAddContactsActivity();
+            }
+        });
 
         ListAdapter adapter = new SimpleCursorAdapter(
                 this,
@@ -42,13 +52,6 @@ public class ContactsActivity extends CompatListActivity implements LoaderManage
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-        Log.d(this.getLocalClassName(), "onResume called");
-        //getLoaderManager().initLoader(0, null, this).forceLoad();
-    }
-
-    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_contacts, menu);
@@ -63,26 +66,13 @@ public class ContactsActivity extends CompatListActivity implements LoaderManage
         int id = item.getItemId();
 
         switch (id) {
-            case R.id.action_add_contact:
-                return handleLaunchAddContactsActivity();
             case R.id.action_burn:
-                SharedPreferences.Editor editor =
-                        getSharedPreferences(getString(R.string.shared_prefs_file), MODE_PRIVATE)
-                                .edit();
-
-                editor.clear().commit();
-                getContentResolver().delete(DatabaseProvider.DELETE_URI, null, null);
-                Intent intent = new Intent(this, MainActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK|Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(intent);
+                Config.burn(this);
                 finish();
                 return true;
             case R.id.action_my_details:
-                SharedPreferences prefs = getSharedPreferences(getString(R.string.shared_prefs_file), MODE_PRIVATE);
-                Intent activityIntent = new Intent(this, MyDetailsActivity.class);
-                activityIntent.putExtra(Config.PUBLIC_KEY, Base64.decode(prefs.getString(Config.PUBLIC_KEY, "")));
-                activityIntent.putExtra(Config.NETWORK_ID, Base64.decode(prefs.getString(Config.NETWORK_ID, "")));
-                startActivity(activityIntent);
+                MyDetailsActivity.Util.launchMyDetailsActivity(this);
+                return true;
         }
 
         return super.onOptionsItemSelected(item);

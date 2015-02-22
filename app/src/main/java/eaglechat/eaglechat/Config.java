@@ -1,5 +1,10 @@
 package eaglechat.eaglechat;
 
+import android.annotation.SuppressLint;
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
@@ -36,5 +41,20 @@ public class Config {
         }
 
         return s.toString();
+    }
+
+    @SuppressLint("CommitPrefEdits")
+    public static void burn(Context activity) {
+        SharedPreferences.Editor editor =
+                activity.getSharedPreferences(
+                        activity.getString(R.string.shared_prefs_file),
+                        Context.MODE_PRIVATE)
+                .edit();
+
+        editor.clear().commit();
+        activity.getContentResolver().delete(DatabaseProvider.DELETE_URI, null, null);
+        Intent intent = new Intent(activity, MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+        activity.startActivity(intent);
     }
 }

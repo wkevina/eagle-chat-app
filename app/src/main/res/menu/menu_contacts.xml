@@ -6,12 +6,9 @@
         android:id="@+id/action_my_details"
         android:title="@string/action_my_details"
         android:orderInCategory="100"
-        app:showAsAction="never"/>
-    <item
-        android:id="@+id/action_add_contact"
-        android:title="@string/action_add_contact"
-        android:icon="@drawable/ic_add_white_48dp"
         app:showAsAction="ifRoom|withText"/>
-    <item android:id="@+id/action_burn"
-          android:title="@string/action_burn"/>
+    <item
+        android:id="@+id/action_burn"
+        app:showAsAction="never"
+        android:title="@string/action_burn"/>
 </menu>

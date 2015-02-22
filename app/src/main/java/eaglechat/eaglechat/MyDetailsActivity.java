@@ -1,5 +1,8 @@
 package eaglechat.eaglechat;
 
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -99,9 +102,11 @@ public class MyDetailsActivity extends ActionBarActivity {
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+        switch(id) {
+            case R.id.action_burn:
+                Config.burn(this);
+                finish();
+                return true;
         }
 
         return super.onOptionsItemSelected(item);
@@ -153,4 +158,18 @@ public class MyDetailsActivity extends ActionBarActivity {
         return bitmap;
     }
 
+    public static class Util {
+        /**
+         * Utility method for launching the MyDetails activity
+         * @param activity Context to use for launching MyDetails
+         */
+        public static void launchMyDetailsActivity(Context activity) {
+            String filename = activity.getString(R.string.shared_prefs_file);
+            SharedPreferences prefs = activity.getSharedPreferences(filename, MODE_PRIVATE);
+            Intent activityIntent = new Intent(activity, MyDetailsActivity.class);
+            activityIntent.putExtra(Config.PUBLIC_KEY, Base64.decode(prefs.getString(Config.PUBLIC_KEY, "")));
+            activityIntent.putExtra(Config.NETWORK_ID, Base64.decode(prefs.getString(Config.NETWORK_ID, "")));
+            activity.startActivity(activityIntent);
+        }
+    }
 }

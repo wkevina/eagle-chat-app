@@ -139,11 +139,10 @@ public class ConversationActivity extends CompatListActivity implements
         int id = item.getItemId();
 
         switch (id) {
-            case R.id.action_settings:
+            case R.id.action_burn:
+                Config.burn(this);
+                finish();
                 return true;
-            case R.id.action_contacts:
-                handleLaunchContactsActivity();
-                break;
             case R.id.action_fake:
                 FakeMessageFragment.newInstance(mContactId).show(getSupportFragmentManager(), "fake");
                 break;

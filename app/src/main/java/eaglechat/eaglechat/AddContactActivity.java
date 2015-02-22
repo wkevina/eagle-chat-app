@@ -10,7 +10,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -143,9 +142,15 @@ public class AddContactActivity extends ActionBarActivity {
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+        switch (id) {
+            case R.id.action_burn:
+                Config.burn(this);
+                finish();
+                return true;
+            case R.id.action_my_details:
+                Log.d(getPackageName(), "My details clicked");
+                MyDetailsActivity.Util.launchMyDetailsActivity(this);
+                return true;
         }
 
         return super.onOptionsItemSelected(item);
