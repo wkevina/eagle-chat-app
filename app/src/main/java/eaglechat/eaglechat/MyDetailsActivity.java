@@ -144,9 +144,10 @@ public class MyDetailsActivity extends ActionBarActivity {
 
     private Bitmap bitMatrixToBitmap(BitMatrix bits) {
         Bitmap bitmap = Bitmap.createBitmap(bits.getWidth(), bits.getHeight(), Bitmap.Config.RGB_565);
+        int background = getResources().getColor(R.color.background_material_light);
         for (int x = 0; x < bits.getWidth(); ++x) {
             for (int y = 0; y < bits.getHeight(); ++y) {
-                bitmap.setPixel(x, y, bits.get(x, y) ? Color.BLACK : Color.WHITE);
+                bitmap.setPixel(x, y, bits.get(x, y) ? Color.BLACK : background);
             }
         }
         return bitmap;
