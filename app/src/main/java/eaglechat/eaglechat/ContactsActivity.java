@@ -1,16 +1,18 @@
 package eaglechat.eaglechat;
 
 import android.app.LoaderManager;
+import android.content.Context;
 import android.content.CursorLoader;
 import android.content.Intent;
 import android.content.Loader;
-import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.SimpleCursorAdapter;
@@ -36,14 +38,16 @@ public class ContactsActivity extends CompatListActivity implements LoaderManage
             }
         });
 
-        ListAdapter adapter = new SimpleCursorAdapter(
+        ListAdapter adapter = new MultiLayoutCursorAdapter(
                 this,
+                new ContactsDelegate(MessagesTable.COLUMN_CONTENT),
                 android.R.layout.two_line_list_item,
                 null,
                 new String[]{ContactsTable.COLUMN_NAME, MessagesTable.COLUMN_CONTENT},
                 new int[]{android.R.id.text1, android.R.id.text2},
                 SimpleCursorAdapter.FLAG_REGISTER_CONTENT_OBSERVER
         );
+
         setListAdapter(adapter);
 
         setListShown(false, false);
@@ -117,5 +121,42 @@ public class ContactsActivity extends CompatListActivity implements LoaderManage
     public void onLoaderReset(Loader<Cursor> loader) {
         Log.d(getLocalClassName(), "onLoaderReset called");
         ((SimpleCursorAdapter) getListAdapter()).changeCursor(null);
+    }
+
+    private class ContactsDelegate implements MultiLayoutCursorAdapter.Delegate {
+
+        String mDecisionColumn;
+
+        private ContactsDelegate(String decisionColumn) {
+            mDecisionColumn = decisionColumn;
+        }
+
+        @Override
+        public int getViewTypeCount() {
+            return 2;
+        }
+
+        @Override
+        public int getItemViewType(int position, Cursor cursor) {
+            cursor.moveToPosition(position);
+            String content = cursor.getString(cursor.getColumnIndex(mDecisionColumn));
+
+            int type = content == null ? 0 : 1;
+
+            return type;
+        }
+
+        @Override
+        public View newView(Context context, Cursor cursor, ViewGroup parent, LayoutInflater inflater) {
+            int type = getItemViewType(cursor.getPosition(), cursor);
+            View v;
+            if (type == 0) {
+                v = inflater.inflate(android.R.layout.simple_list_item_1, parent, false);
+            } else {
+                v = inflater.inflate(R.layout.list_contact_with_message, parent, false);
+            }
+            return v;
+        }
+
     }
 }

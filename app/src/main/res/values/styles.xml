@@ -6,6 +6,13 @@
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
         <item name="actionBarSize">48dp</item>
+
+        <item name="textAppearanceListItemSmall">@style/ListSubHead</item>
+    </style>
+
+    <style name="ListSubHead" parent="TextAppearance.AppCompat.Subhead">
+        <item name="android:textColor">?android:attr/textColorSecondary</item>
+        <item name="android:textSize">14sp</item>
     </style>
 
 </resources>

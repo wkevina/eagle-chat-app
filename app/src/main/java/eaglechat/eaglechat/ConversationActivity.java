@@ -1,6 +1,5 @@
 package eaglechat.eaglechat;
 
-import android.app.ActionBar;
 import android.app.LoaderManager;
 import android.content.ContentUris;
 import android.content.ContentValues;
@@ -21,10 +20,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.SimpleCursorAdapter;
-import android.widget.TextView;
 
 public class ConversationActivity extends CompatListActivity implements
         LoaderManager.LoaderCallbacks<Cursor> {
@@ -54,16 +51,16 @@ public class ConversationActivity extends CompatListActivity implements
             Log.d(getPackageName(), String.format("Contact id=%d", mContactId));
         }
 
-        MessagesCursorAdapter adapter = new MessagesCursorAdapter(
+        MultiLayoutCursorAdapter adapter = new MultiLayoutCursorAdapter(
                 this,
+                new MessagesDelegate(MessagesTable.COLUMN_SENDER),
                 R.layout.right_message_item,
-                R.layout.left_message_item,
                 null,
                 new String[]{MessagesTable.COLUMN_CONTENT},
                 new int[]{android.R.id.text2},
-                MessagesTable.COLUMN_SENDER,
                 SimpleCursorAdapter.FLAG_REGISTER_CONTENT_OBSERVER
         );
+        /*
         adapter.setViewBinder(new SimpleCursorAdapter.ViewBinder() {
             @Override
             public boolean setViewValue(View view, Cursor cursor, int columnIndex) {
@@ -80,6 +77,8 @@ public class ConversationActivity extends CompatListActivity implements
                 return true;
             }
         });
+        */
+
         setListAdapter(adapter);
 
         getListView().setDivider(null);
@@ -229,75 +228,37 @@ public class ConversationActivity extends CompatListActivity implements
         ((SimpleCursorAdapter) getListAdapter()).changeCursor(null);
     }
 
-    public static class MessagesCursorAdapter extends SimpleCursorAdapter {
-        private int mLayoutMine, mLayoutTheirs;
-        private Context mContext;
-        LayoutInflater mInflater;
-        private String mSelectionColumn;
+    private class MessagesDelegate implements MultiLayoutCursorAdapter.Delegate {
 
-        public MessagesCursorAdapter(Context context, int layout, Cursor c, String[] from, int[] to, int flags) {
-            this(context, layout, layout, c, from, to, null, flags);
-        }
+        String mSelectionColumn;
 
-        public MessagesCursorAdapter(Context context, int layoutMine, int layoutTheirs, Cursor c, String[] from, int[] to, String selectionColumn, int flags) {
-            super(context, layoutMine, c, from, to, flags);
-            mLayoutMine = layoutMine;
-            mLayoutTheirs = layoutTheirs;
-            mInflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        private MessagesDelegate(String selectionColumn) {
             mSelectionColumn = selectionColumn;
-            mContext = context;
         }
 
         @Override
         public int getViewTypeCount() {
-            return mSelectionColumn == null ? 1 : 2;
+            return 2;
         }
 
         @Override
-        public int getItemViewType(int position) {
-            if (mSelectionColumn == null) {
-                return 0;
-            }
-            Cursor c = getCursor();
-            int selectionColumn = c.getColumnIndex(mSelectionColumn);
-            c.moveToPosition(position);
-            long selectionId = c.getLong(selectionColumn);
+        public int getItemViewType(int position, Cursor cursor) {
+            cursor.moveToPosition(position);
+            int selectionColumn = cursor.getColumnIndex(mSelectionColumn);
+            long selectionId = cursor.getLong(selectionColumn);
             return selectionId == 0 ? 0 : 1;
         }
 
         @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
-            if (!getCursor().moveToPosition(position)) {
-                throw new IllegalStateException("couldn't move cursor to position " + position);
-            }
+        public View newView(Context context, Cursor cursor, ViewGroup parent, LayoutInflater inflater) {
+            int type = getItemViewType(cursor.getPosition(), cursor);
             View v;
-            if (convertView == null) {
-                v = newView(mContext, getCursor(), parent);
+            if (type == 0) {
+                v = inflater.inflate(R.layout.right_message_item, parent, false);
             } else {
-                v = convertView;
+                v = inflater.inflate(R.layout.left_message_item, parent, false);
             }
-            bindView(v, mContext, getCursor());
             return v;
-        }
-
-        @Override
-        public View newView(Context context, Cursor cursor, ViewGroup parent) {
-            // Support parent's behavior
-            if (mSelectionColumn == null)
-                return super.newView(context, cursor, parent);
-            else {
-                int selectionColumn = cursor.getColumnIndex(mSelectionColumn);
-                long selectionId = cursor.getLong(selectionColumn);
-                View v;
-                if (selectionId == 0) {
-                    v = mInflater.inflate(mLayoutMine, parent, false);
-                    v.setTag("ME");
-                } else {
-                    v = mInflater.inflate(mLayoutTheirs, parent, false);
-                    v.setTag("YOU");
-                }
-                return v;
-            }
         }
     }
 }

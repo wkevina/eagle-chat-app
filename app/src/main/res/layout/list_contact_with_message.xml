@@ -1,0 +1,24 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                 android:layout_width="match_parent"
+                 android:layout_height="wrap_content"
+                 android:minHeight="?android:attr/listPreferredItemHeight"
+                 android:paddingStart="?android:attr/listPreferredItemPaddingStart"
+                 android:paddingLeft="?android:attr/listPreferredItemPaddingLeft"
+                 android:paddingEnd="?android:attr/listPreferredItemPaddingEnd"
+                 android:paddingRight="?android:attr/listPreferredItemPaddingRight">
+
+    <TextView android:id="@android:id/text1"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:layout_marginTop="8dip"
+              android:textAppearance="?android:attr/textAppearanceListItem" />
+
+    <TextView android:id="@android:id/text2"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:layout_below="@android:id/text1"
+              android:layout_alignStart="@android:id/text1"
+              android:layout_alignLeft="@android:id/text1"
+              android:textAppearance="?attr/textAppearanceListItemSmall" />
+
+</RelativeLayout>
