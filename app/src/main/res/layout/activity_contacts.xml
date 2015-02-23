@@ -16,10 +16,9 @@
         <include layout="@layout/list_content"/>
     </FrameLayout>
 
-
     <com.melnykov.fab.FloatingActionButton
         android:id="@+id/action_add_contact"
-        android:elevation="2dp"
+        android:elevation="10dp"
         android:src="@drawable/ic_add_white_24dp"
         android:layout_alignParentBottom="true"
         android:layout_alignParentRight="true"

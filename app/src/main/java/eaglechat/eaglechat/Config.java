@@ -18,7 +18,9 @@ public class Config {
 
     public static final String NETWORK_ID = BASE + "network_id";
 
-    public static String getFingerPrint(byte[] key, byte[] address) {
+    public static final String NAME = BASE + "name";
+
+    public static String fingerprint(byte[] key, byte[] address) {
         try {
             MessageDigest sha256 = MessageDigest.getInstance("sha256");
             sha256.update(key);
@@ -43,6 +45,16 @@ public class Config {
         return s.toString();
     }
 
+    public static byte[] stringToBytes(String s) {
+        int len = s.length();
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
+                    + Character.digit(s.charAt(i+1), 16));
+        }
+        return data;
+    }
+
     @SuppressLint("CommitPrefEdits")
     public static void burn(Context activity) {
         SharedPreferences.Editor editor =
@@ -53,8 +65,20 @@ public class Config {
 
         editor.clear().commit();
         activity.getContentResolver().delete(DatabaseProvider.DELETE_URI, null, null);
+        restart(activity);
+    }
+
+    public static void restart(Context activity) {
         Intent intent = new Intent(activity, MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
         activity.startActivity(intent);
+    }
+
+    public static boolean isSetup(Context ctx) {
+        SharedPreferences prefs = ctx.getSharedPreferences(ctx.getString(R.string.shared_prefs_file), Context.MODE_PRIVATE);
+        return prefs.contains(Config.PUBLIC_KEY)
+                && prefs.contains(Config.NETWORK_ID)
+                && prefs.contains(Config.NAME);
+
     }
 }

@@ -47,13 +47,17 @@
 
         <activity
             android:name=".MyDetailsActivity"
-            android:label="@string/title_activity_my_details"
-            android:windowSoftInputMode="stateUnchanged"
             android:enabled="true"
-            android:parentActivityName=".ContactsActivity" >
+            android:label="@string/title_activity_my_details"
+            android:parentActivityName=".ContactsActivity"
+            android:windowSoftInputMode="stateUnchanged" >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="eaglechat.eaglechat.ContactsActivity" />
+        </activity>
+        <activity
+            android:name=".RegisterActivity"
+            android:label="@string/title_activity_register" >
         </activity>
     </application>
 

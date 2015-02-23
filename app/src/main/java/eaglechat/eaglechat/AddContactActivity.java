@@ -10,7 +10,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.common.collect.ImmutableList;
@@ -79,11 +78,11 @@ public class AddContactActivity extends ActionBarActivity {
     private void decodeQRCode(String contents) {
         String[] chunks = contents.split(":");
         boolean isEagleChat = chunks[0].equalsIgnoreCase("eaglechat"); // Chunk #1 must be 'eaglechat'
-        if (!isEagleChat || chunks.length != 3) {
+        if (!isEagleChat || !(chunks.length == 3 || chunks.length == 4)) {
             Toast.makeText(this, "Not an EagleChat code", Toast.LENGTH_LONG).show();
             return;
         }
-        byte[] networkId = Base64.decode(chunks[1]); // Decode the network ID from chunk #2
+        byte[] networkId = Config.stringToBytes(chunks[1]); // Decode the network ID from chunk #2
         byte[] publicKeyBytes = Base64.decode(chunks[2]); // Decode the public key from chunk #3
 
         if (networkId.length != 2) {
@@ -94,10 +93,14 @@ public class AddContactActivity extends ActionBarActivity {
             Toast.makeText(this, "Invalid code", Toast.LENGTH_LONG).show();
             return;
         }
-        mPublicKey = Base64.toBase64String(publicKeyBytes);
 
+        if (chunks.length == 4 && mNameText.getText().length() == 0) {
+            mNameText.setText(chunks[3]);
+        }
+
+        mPublicKey = Base64.toBase64String(publicKeyBytes);
         mNetworkIdText.setText(Config.bytesToString(networkId, ""));
-        mScanButton.setText("Fingerprint: " + Config.getFingerPrint(publicKeyBytes, networkId));
+        mScanButton.setText("Fingerprint: " + Config.fingerprint(publicKeyBytes, networkId));
     }
 
     private void submit() {
@@ -114,11 +117,11 @@ public class AddContactActivity extends ActionBarActivity {
             mNetworkIdText.setError("Enter network ID");
             doesValidate = false;
         }
-        if (mPublicKey.isEmpty()) {
+        if (mPublicKey == null || mPublicKey.isEmpty()) {
             Toast.makeText(this, "Invalid public key", Toast.LENGTH_LONG).show();
             doesValidate = false;
         }
-        if (doesValidate == false) {
+        if (!doesValidate) {
             Log.d(this.getLocalClassName(), "Some fields are missing. Cannot continue.");
         } else {
             addContact(networkId, contactName, mPublicKey);

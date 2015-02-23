@@ -11,7 +11,6 @@ import android.view.MenuItem;
 import org.spongycastle.util.encoders.Base64;
 
 import java.security.Provider;
-import java.security.SecureRandom;
 import java.security.Security;
 import java.util.Iterator;
 import java.util.Set;
@@ -21,6 +20,7 @@ public class MainActivity extends Activity {
     private final int STATE_LAUNCH_LIST_ACTIVITY = 0;
     private final int STATE_LAUNCH_CONTACTS_ACTIVITY = 1;
     private final int STATE_LAUNCH_DETAILS_ACTIVITY = 2;
+    private final int STATE_LAUNCH_REGISTER_ACTIVITY = 3;
 
     private int mState = 0;
 
@@ -44,31 +44,24 @@ public class MainActivity extends Activity {
             case STATE_LAUNCH_DETAILS_ACTIVITY:
                 handleLaunchDetailsActivity();
                 break;
+            case STATE_LAUNCH_REGISTER_ACTIVITY:
+                handleLaunchRegisterActivity();
             default:
                 finish();
                 break;
         }
     }
 
+    private void handleLaunchRegisterActivity() {
+        Intent activityIntent = new Intent(this, RegisterActivity.class);
+        startActivity(activityIntent);
+        finish();
+    }
+
     private int determineState() {
-        SharedPreferences prefs = getSharedPreferences(getString(R.string.shared_prefs_file), MODE_PRIVATE);
-        boolean setup = prefs.contains(Config.PUBLIC_KEY) && prefs.contains(Config.NETWORK_ID);
-
-        if (!setup) {
-            byte[] publicKey = new byte[32];
-            byte[] networkId = new byte[2];
-            SecureRandom r = new SecureRandom(new byte[]{0x10, 0x02, 0x03, 0x04});
-            r.nextBytes(publicKey);
-            r.nextBytes(networkId);
-
-            SharedPreferences.Editor editor = prefs.edit();
-
-            editor.clear()
-                    .putString(Config.PUBLIC_KEY, Base64.toBase64String(publicKey))
-                    .putString(Config.NETWORK_ID, Base64.toBase64String(networkId))
-                .apply();
+        if (!Config.isSetup(this)) {
+            return STATE_LAUNCH_REGISTER_ACTIVITY;
         }
-
         return STATE_LAUNCH_CONTACTS_ACTIVITY;
     }
 

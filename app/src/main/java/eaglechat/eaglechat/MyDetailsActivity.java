@@ -10,6 +10,7 @@ import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -34,13 +35,17 @@ import java.util.Map;
 public class MyDetailsActivity extends ActionBarActivity {
 
     private static final int MARGIN = 0;
-    private static final int CODE_SIZE = 200;
+    private int CODE_SIZE = 200;
     byte[] mPublicKey = new byte[32];
 
     byte[] mAddress = new byte[]{0x00, 0x01};
 
+    String mNetworkId;
+
+    String mName;
+
     ImageView mQRCodeView;
-    TextView mFingerPrintText, mKeyText, mAddressText;
+    TextView mFingerPrintText, mKeyText, mNetworkIdText;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,17 +57,24 @@ public class MyDetailsActivity extends ActionBarActivity {
         mQRCodeView = (ImageView) findViewById(R.id.image_qr);
         mFingerPrintText = (TextView) findViewById(R.id.text_fingerprint);
         mKeyText = (TextView) findViewById(R.id.text_key);
-        mAddressText = (TextView) findViewById(R.id.text_address);
+        mNetworkIdText = (TextView) findViewById(R.id.text_address);
 
         Log.d(getPackageName(), String.format("Public key=%s", bytesToString(mPublicKey, ":")));
 
-        String f = getFingerPrint(mPublicKey, mAddress);
+        String f = fingerprintFromBytes(mPublicKey, Config.stringToBytes(mNetworkId));
         mFingerPrintText.setText(f);
 
         mKeyText.setText(bytesToString(mPublicKey, " "));
 
-        mAddressText.setText(bytesToString(mAddress, ""));
+        mNetworkIdText.setText(mNetworkId);
 
+    }
+
+
+
+    @Override
+    protected void onResume() {
+        super.onResume();
         showCode();
     }
 
@@ -72,7 +84,8 @@ public class MyDetailsActivity extends ActionBarActivity {
             finish(); // bail!
         }
         mPublicKey = args.getByteArray(Config.PUBLIC_KEY);
-        mAddress = args.getByteArray(Config.NETWORK_ID);
+        mNetworkId = args.getString(Config.NETWORK_ID);
+        mName = args.getString(Config.NAME);
     }
 
     private String bytesToString(byte[] bytes, String separator) {
@@ -114,10 +127,16 @@ public class MyDetailsActivity extends ActionBarActivity {
 
     private void showCode() {
         String publicKeyString = Base64.toBase64String(mPublicKey);
-        String addressString = Base64.toBase64String(mAddress);
-        String dataString = String.format("eaglechat:%s:%s", addressString, publicKeyString);
+        String addressString = mNetworkId;
+        String dataString = String.format("eaglechat:%s:%s:%s", addressString, publicKeyString, mName);
 
         Log.d(getPackageName(), dataString);
+
+        mQRCodeView.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+
+        int measuredSize = mQRCodeView.getMeasuredWidth();
+
+        CODE_SIZE = measuredSize > 0 ? measuredSize : CODE_SIZE;
 
         QRCodeWriter writer = new QRCodeWriter();
         BitMatrix bits;
@@ -134,7 +153,7 @@ public class MyDetailsActivity extends ActionBarActivity {
         mQRCodeView.setImageBitmap(qrCode);
     }
 
-    private String getFingerPrint(byte[] key, byte[] address) {
+    private String fingerprintFromBytes(byte[] key, byte[] address) {
         try {
             MessageDigest sha256 = MessageDigest.getInstance("sha256");
             sha256.update(key);
@@ -168,7 +187,8 @@ public class MyDetailsActivity extends ActionBarActivity {
             SharedPreferences prefs = activity.getSharedPreferences(filename, MODE_PRIVATE);
             Intent activityIntent = new Intent(activity, MyDetailsActivity.class);
             activityIntent.putExtra(Config.PUBLIC_KEY, Base64.decode(prefs.getString(Config.PUBLIC_KEY, "")));
-            activityIntent.putExtra(Config.NETWORK_ID, Base64.decode(prefs.getString(Config.NETWORK_ID, "")));
+            activityIntent.putExtra(Config.NETWORK_ID, prefs.getString(Config.NETWORK_ID, ""));
+            activityIntent.putExtra(Config.NAME, prefs.getString(Config.NAME, ""));
             activity.startActivity(activityIntent);
         }
     }
