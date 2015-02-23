@@ -5,11 +5,14 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.common.collect.ImmutableList;
@@ -52,6 +55,45 @@ public class AddContactActivity extends ActionBarActivity {
                 startScan();
             }
         });
+
+        View.OnFocusChangeListener focusListener = new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View v, boolean hasFocus) {
+                if (!hasFocus) {
+                    onInputUpdated();
+                }
+            }
+        };
+        mPublicKeyText.setOnFocusChangeListener(focusListener);
+        mNetworkIdText.setOnFocusChangeListener(focusListener);
+        mNetworkIdText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+            @Override
+            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+                if (actionId == EditorInfo.IME_ACTION_DONE) {
+                    final View captured = v;
+                    v.postDelayed(new Runnable() { // Shouldn't have to do this. I mean really.
+                        @Override
+                        public void run() {
+                            captured.clearFocus();
+                        }
+                    }, 100);
+                }
+                return false;
+            }
+        });
+    }
+
+    private void onInputUpdated() {
+        String pubHex = mPublicKeyText.getText().toString();
+        String idHex = mNetworkIdText.getText().toString();
+        boolean isFilledOut = Config.validateHexKeyString(pubHex) &&
+                Config.validateNetworkId(idHex);
+        if (isFilledOut) {
+            byte[] pubKeyBytes = Config.hexStringToBytes(Config.stripSeparators(pubHex));
+            mPublicKey = Base64.toBase64String(pubKeyBytes); // Decode and recode public key
+            byte[] idBytes = Config.hexStringToBytes(Config.padHex(idHex, 4));
+            mScanButton.setText("Fingerprint: " + Config.fingerprint(pubKeyBytes, idBytes));
+        }
     }
 
     private void startScan() {
@@ -141,7 +183,6 @@ public class AddContactActivity extends ActionBarActivity {
         getContentResolver().insert(DatabaseProvider.CONTACTS_URI, values);
         finish();
     }
-
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {

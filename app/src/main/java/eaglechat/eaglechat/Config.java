@@ -133,4 +133,14 @@ public class Config {
         }
         return true;
     }
+
+    public static String stripSeparators(String s) {
+        return s.replaceAll("[: ]", "");
+    }
+
+    public static boolean validateHexKeyString(String s) {
+        s = stripSeparators(s);
+
+        return s.length() == 2*32;
+    }
 }
