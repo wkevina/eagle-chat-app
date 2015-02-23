@@ -33,7 +33,7 @@ public class RegisterActivity extends ActionBarActivity {
 
         mNameText = (EditText) findViewById(R.id.text_name);
         mNetworkIdText = (EditText) findViewById(R.id.text_id);
-        mKeyLabel = (TextView) findViewById(R.id.text_key);
+        mKeyLabel = (TextView) findViewById(R.id.text_publicKey);
 
         mDoneButton = (FloatingActionButton) findViewById(R.id.button_submit);
 
@@ -67,6 +67,7 @@ public class RegisterActivity extends ActionBarActivity {
         try {
             int networkId = Integer.parseInt(mNetworkIdText.getText().toString(), 16) & 0xFFFF;
             networkIdString = Integer.toHexString(networkId);
+            networkIdString = Config.padHex(networkIdString, 4);
         } catch (NumberFormatException ex) {
             isReady = false;
             mNetworkIdText.setError("Invalid ID");
@@ -92,7 +93,7 @@ public class RegisterActivity extends ActionBarActivity {
                 .putString(Config.NAME, name)
                 .putString(Config.NETWORK_ID, id)
                 .putString(Config.PUBLIC_KEY, key)
-        .commit();
+                .commit();
     }
 
     @Override
@@ -113,15 +114,12 @@ public class RegisterActivity extends ActionBarActivity {
     }
 
     private void dummyEncryptionSetup() {
-        // SharedPreferences prefs = getSharedPreferences(getString(R.string.shared_prefs_file), MODE_PRIVATE);
-        // boolean setup = prefs.contains(Config.PUBLIC_KEY) && prefs.contains(Config.NETWORK_ID);
-
         byte[] publicKey = new byte[32];
 
         SecureRandom r = new SecureRandom(new byte[]{0x10, 0x02, 0x03, 0x04});
         r.nextBytes(publicKey);
 
-        if (mNetworkIdText.getText().toString().isEmpty()) { // If not id has been supplied by the user
+        if (mNetworkIdText.getText().toString().isEmpty()) { // If no id has been supplied by the user
             byte[] networkId = new byte[2];
             r.nextBytes(networkId);
             mNetworkIdText.setText(Config.bytesToString(networkId, ""));
@@ -129,15 +127,6 @@ public class RegisterActivity extends ActionBarActivity {
 
         mKeyLabel.setText(Config.bytesToString(publicKey, " "));
         mPublicKey = Base64.toBase64String(publicKey);
-/*
-            SharedPreferences.Editor editor = prefs.edit();
-
-            editor.clear()
-                    .putString(Config.PUBLIC_KEY, Base64.toBase64String(publicKey))
-                    .putString(Config.NETWORK_ID, Base64.toBase64String(networkId))
-                    .apply();
-
-*/
     }
 
 }

@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
-import android.graphics.Color;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
@@ -23,8 +22,6 @@ import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 
 import org.spongycastle.util.encoders.Base64;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -37,8 +34,6 @@ public class MyDetailsActivity extends ActionBarActivity {
     private static final int MARGIN = 0;
     private int CODE_SIZE = 200;
     byte[] mPublicKey = new byte[32];
-
-    byte[] mAddress = new byte[]{0x00, 0x01};
 
     String mNetworkId;
 
@@ -56,20 +51,19 @@ public class MyDetailsActivity extends ActionBarActivity {
 
         mQRCodeView = (ImageView) findViewById(R.id.image_qr);
         mFingerPrintText = (TextView) findViewById(R.id.text_fingerprint);
-        mKeyText = (TextView) findViewById(R.id.text_key);
+        mKeyText = (TextView) findViewById(R.id.text_publicKey);
         mNetworkIdText = (TextView) findViewById(R.id.text_address);
 
-        Log.d(getPackageName(), String.format("Public key=%s", bytesToString(mPublicKey, ":")));
+        Log.d(getPackageName(), String.format("Public key=%s", Config.bytesToString(mPublicKey, ":")));
 
-        String f = fingerprintFromBytes(mPublicKey, Config.stringToBytes(mNetworkId));
+        String f = Config.fingerprint(mPublicKey, Config.hexStringToBytes(mNetworkId));
         mFingerPrintText.setText(f);
 
-        mKeyText.setText(bytesToString(mPublicKey, " "));
+        mKeyText.setText(Config.bytesToString(mPublicKey, " "));
 
         mNetworkIdText.setText(mNetworkId);
 
     }
-
 
 
     @Override
@@ -88,19 +82,6 @@ public class MyDetailsActivity extends ActionBarActivity {
         mName = args.getString(Config.NAME);
     }
 
-    private String bytesToString(byte[] bytes, String separator) {
-        StringBuilder s = new StringBuilder();
-        for (byte b : bytes) {
-            s.append(String.format("%02x%s", b, separator));
-        }
-        if (!separator.isEmpty()) {
-            s.deleteCharAt(s.length() - 1); // delete the last separator character
-        }
-
-        return s.toString();
-    }
-
-
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -115,7 +96,7 @@ public class MyDetailsActivity extends ActionBarActivity {
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
-        switch(id) {
+        switch (id) {
             case R.id.action_burn:
                 Config.burn(this);
                 finish();
@@ -149,37 +130,15 @@ public class MyDetailsActivity extends ActionBarActivity {
             return;
         }
 
-        Bitmap qrCode = bitMatrixToBitmap(bits);
+        Bitmap qrCode = Config.bitMatrixToBitmap(this, bits);
         mQRCodeView.setImageBitmap(qrCode);
     }
 
-    private String fingerprintFromBytes(byte[] key, byte[] address) {
-        try {
-            MessageDigest sha256 = MessageDigest.getInstance("sha256");
-            sha256.update(key);
-            sha256.update(address);
-            byte[] hash = sha256.digest();
-            String fingerprint = bytesToString(hash, "").substring(0, 2 * 4);
-            return fingerprint;
-        } catch (NoSuchAlgorithmException ex) {
-            return "";
-        }
-    }
-
-    private Bitmap bitMatrixToBitmap(BitMatrix bits) {
-        Bitmap bitmap = Bitmap.createBitmap(bits.getWidth(), bits.getHeight(), Bitmap.Config.RGB_565);
-        int background = getResources().getColor(R.color.background_material_light);
-        for (int x = 0; x < bits.getWidth(); ++x) {
-            for (int y = 0; y < bits.getHeight(); ++y) {
-                bitmap.setPixel(x, y, bits.get(x, y) ? Color.BLACK : background);
-            }
-        }
-        return bitmap;
-    }
 
     public static class Util {
         /**
          * Utility method for launching the MyDetails activity
+         *
          * @param activity Context to use for launching MyDetails
          */
         public static void launchMyDetailsActivity(Context activity) {

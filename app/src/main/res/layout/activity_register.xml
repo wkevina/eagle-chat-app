@@ -18,7 +18,14 @@
         tools:context="eaglechat.eaglechat.AddContactActivity">
 
         <TextView
-            android:text="It's time to set up your EagleChat device.\n\nEnter a name for other EagleChat users to see:"
+            android:text="@string/label_setupDescription"
+            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            android:text="@string/label_nameDescription"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"/>
 
@@ -55,7 +62,7 @@
             android:layout_gravity="center"/>
 
         <TextView
-            android:id="@+id/text_key"
+            android:id="@+id/text_publicKey"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"/>
 

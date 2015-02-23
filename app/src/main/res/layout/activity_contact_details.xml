@@ -17,7 +17,7 @@
         android:text="@string/label_public_key"/>
 
     <TextView
-        android:id="@+id/text_key"
+        android:id="@+id/text_publicKey"
         android:textStyle="bold"
         android:selectAllOnFocus="true"
         android:textIsSelectable="true"

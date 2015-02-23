@@ -22,7 +22,7 @@ import org.spongycastle.util.encoders.Base64;
 
 public class AddContactActivity extends ActionBarActivity {
 
-    EditText mNameText, mNetworkIdText;
+    EditText mNameText, mNetworkIdText, mPublicKeyText;
     Button mScanButton;
     FloatingActionButton mSubmitButton;
 
@@ -35,6 +35,7 @@ public class AddContactActivity extends ActionBarActivity {
 
         mNameText = (EditText) findViewById(R.id.text_name);
         mNetworkIdText = (EditText) findViewById(R.id.text_id);
+        mPublicKeyText = (EditText) findViewById(R.id.text_publicKey);
 
         mSubmitButton = (FloatingActionButton) findViewById(R.id.button_submit);
         mScanButton = (Button) findViewById(R.id.button_scan);
@@ -82,30 +83,31 @@ public class AddContactActivity extends ActionBarActivity {
             Toast.makeText(this, "Not an EagleChat code", Toast.LENGTH_LONG).show();
             return;
         }
-        byte[] networkId = Config.stringToBytes(chunks[1]); // Decode the network ID from chunk #2
+        String networkId = Config.padHex(chunks[1], 4); // Decode the network ID from chunk #2
         byte[] publicKeyBytes = Base64.decode(chunks[2]); // Decode the public key from chunk #3
 
-        if (networkId.length != 2) {
-            Toast.makeText(this, "Invalid code", Toast.LENGTH_LONG).show();
+        if (!Config.validateNetworkId(networkId)) {
+            Toast.makeText(this, "Invalid network ID", Toast.LENGTH_LONG).show();
             return;
         }
+
         if (publicKeyBytes.length != 32) {
-            Toast.makeText(this, "Invalid code", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Invalid public key", Toast.LENGTH_LONG).show();
             return;
         }
 
         if (chunks.length == 4 && mNameText.getText().length() == 0) {
             mNameText.setText(chunks[3]);
         }
-
         mPublicKey = Base64.toBase64String(publicKeyBytes);
-        mNetworkIdText.setText(Config.bytesToString(networkId, ""));
-        mScanButton.setText("Fingerprint: " + Config.fingerprint(publicKeyBytes, networkId));
+        mPublicKeyText.setText(Config.bytesToString(publicKeyBytes, " "));
+        mNetworkIdText.setText(networkId);
+        mScanButton.setText("Fingerprint: " + Config.fingerprint(publicKeyBytes, Config.hexStringToBytes(networkId)));
     }
 
     private void submit() {
         String contactName = mNameText.getText().toString();
-        String networkId = mNetworkIdText.getText().toString();
+        String networkId = Config.padHex(mNetworkIdText.getText().toString(), 4);
 
         boolean doesValidate = true;
 
@@ -115,6 +117,9 @@ public class AddContactActivity extends ActionBarActivity {
         }
         if (networkId.isEmpty()) {
             mNetworkIdText.setError("Enter network ID");
+            doesValidate = false;
+        } else if (!Config.validateNetworkId(networkId)) {
+            mNetworkIdText.setError("Contains invalid characters. Must be hex-format number.");
             doesValidate = false;
         }
         if (mPublicKey == null || mPublicKey.isEmpty()) {

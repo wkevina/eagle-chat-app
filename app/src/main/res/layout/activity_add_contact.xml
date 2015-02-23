@@ -6,6 +6,8 @@
               android:paddingLeft="@dimen/activity_horizontal_margin"
               android:paddingTop="@dimen/activity_vertical_margin"
               android:orientation="vertical"
+              android:focusable="true"
+              android:focusableInTouchMode="true"
               android:background="@color/background_material_light"
               tools:context="eaglechat.eaglechat.AddContactActivity">
 
@@ -22,6 +24,23 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:inputType="textPersonName|textCapWords"
+        android:singleLine="true"
+        android:layout_marginEnd="@dimen/activity_horizontal_margin"
+        android:layout_marginRight="@dimen/activity_horizontal_margin"/>
+
+    <TextView
+        android:paddingRight="5dp"
+        android:paddingEnd="5dp"
+        android:text="@string/label_public_key"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
+
+    <EditText
+        android:id="@+id/text_publicKey"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:digits="0123456789abcdef"
+        android:inputType="text|textNoSuggestions"
         android:singleLine="true"
         android:layout_marginEnd="@dimen/activity_horizontal_margin"
         android:layout_marginRight="@dimen/activity_horizontal_margin"/>
