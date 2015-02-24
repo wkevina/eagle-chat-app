@@ -7,15 +7,19 @@ import android.content.Intent;
 import android.content.Loader;
 import android.database.Cursor;
 import android.os.Bundle;
+import android.util.AttributeSet;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.ListAdapter;
 import android.widget.ListView;
+import android.widget.RelativeLayout;
 import android.widget.SimpleCursorAdapter;
+import android.widget.TextView;
 
 import com.melnykov.fab.FloatingActionButton;
 
@@ -152,6 +156,8 @@ public class ContactsActivity extends CompatListActivity implements LoaderManage
             View v;
             if (type == 0) {
                 v = inflater.inflate(android.R.layout.simple_list_item_1, parent, false);
+                ((TextView)v.findViewById(android.R.id.text1))
+                        .setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.ic_chevron_right_black_24dp, 0);
             } else {
                 v = inflater.inflate(R.layout.list_contact_with_message, parent, false);
             }
