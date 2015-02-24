@@ -30,6 +30,9 @@
         android:layout_alignStart="@android:id/text1"
         android:layout_alignLeft="@android:id/text1"
         android:layout_toLeftOf="@id/decoration"
+        android:maxLines="2"
+        android:ellipsize="end"
+        android:textSize="12sp"
         android:textAppearance="?attr/textAppearanceListItemSmall"/>
 
 </RelativeLayout>
