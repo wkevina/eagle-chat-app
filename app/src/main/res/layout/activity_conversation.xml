@@ -32,6 +32,7 @@
             android:layout_height="wrap_content"
             android:singleLine="false"
             android:minHeight="48dp"
+            android:maxLength="@integer/max_chars"
             android:layout_gravity="bottom"
             android:layout_weight="1"/>
 
@@ -45,7 +46,3 @@
 
 
 </LinearLayout>
-
-    <!--    android:background="?attr/selectableItemBackgroundBorderless"
-                 android:padding="@dimen/abc_action_bar_default_padding_material"
-    -->
