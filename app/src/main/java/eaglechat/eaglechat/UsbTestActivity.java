@@ -89,8 +89,8 @@ public class UsbTestActivity extends ActionBarActivity {
                 Log.d(TAG, "READ clicked.");
                 /*try {*/
 
-                mSerialIoManager.writeAsync(new byte[]{'R'});
-                mSerialIoManager.writeAsync(new byte[]{0x0A});
+                mSerialIoManager.writeAsync(new byte[]{'R', 0x0A});
+                //mSerialIoManager.writeAsync(new byte[]{0x0A});
                 mState = STATE_JUST_READ;
                 /*} catch (IOException ex) {
                     Log.d(TAG, "Write failed.");
@@ -251,15 +251,13 @@ public class UsbTestActivity extends ActionBarActivity {
         Log.d(TAG, "Serial number: " + connection.getSerial());
         try {
             port.open(connection);
-            port.setParameters(9600, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE);
-            //port.setDTR(true);
-
-            try {
+            port.setParameters(115200, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE);
+            /*try {
                 Log.d(TAG, "Writing to device.");
-                port.write("\n".getBytes(), 1000);
+                //port.write("\n".getBytes(), 1000);
             } catch (IOException ex) {
                 Log.e(TAG, ex.toString());
-            }
+            }*/
 
         } catch (IOException ex) {
             Log.e(TAG, "Open failed. Exception: ");
@@ -278,7 +276,9 @@ public class UsbTestActivity extends ActionBarActivity {
     private void onDeviceStateChange() {
         stopIoManager();
         startIoManager();
-        mSerialIoManager.writeAsync(new byte[]{0x0A});
+        try {
+            mPort.setDTR(true);
+        } catch (IOException ex) {}
         /*
         if (mPort != null) {
             try {
