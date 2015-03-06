@@ -28,4 +28,5 @@
     <string name="hint_publicKey">00:11:22:33:44:55:66:77:88:99:aa:bb:cc:dd:ee:ff:00:11:22:33:44:55:66:77:88:99:aa:bb:cc:dd:ee:ff</string>
     <string name="hint_contactName">First Last</string>
     <string name="hint_networkId">01ab</string>
+    <string name="title_activity_usb_test">UsbTestActivity</string>
 </resources>

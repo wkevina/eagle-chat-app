@@ -21,6 +21,7 @@ public class MainActivity extends Activity {
     private final int STATE_LAUNCH_CONTACTS_ACTIVITY = 1;
     private final int STATE_LAUNCH_DETAILS_ACTIVITY = 2;
     private final int STATE_LAUNCH_REGISTER_ACTIVITY = 3;
+    private final int STATE_LAUNCH_USB_ACTIVITY = 4;
 
     private int mState = 0;
 
@@ -34,6 +35,8 @@ public class MainActivity extends Activity {
 
         mState = determineState();
 
+        //mState = STATE_LAUNCH_USB_ACTIVITY;
+
         switch (mState) {
             case STATE_LAUNCH_LIST_ACTIVITY:
                 handleLaunchListActivity();
@@ -46,10 +49,20 @@ public class MainActivity extends Activity {
                 break;
             case STATE_LAUNCH_REGISTER_ACTIVITY:
                 handleLaunchRegisterActivity();
+                break;
+            case STATE_LAUNCH_USB_ACTIVITY:
+                handleLaunchUsbActivity();
+                break;
             default:
                 finish();
                 break;
         }
+    }
+
+    private void handleLaunchUsbActivity() {
+        Intent activityIntent = new Intent(this, UsbTestActivity.class);
+        startActivity(activityIntent);
+        finish();
     }
 
     private void handleLaunchRegisterActivity() {

@@ -37,10 +37,10 @@ import java.nio.ByteBuffer;
  */
 public class SerialInputOutputManager implements Runnable {
 
-    private static final String TAG = SerialInputOutputManager.class.getSimpleName();
+    private static final String TAG = "eaglechat.eaglechat";
     private static final boolean DEBUG = true;
 
-    private static final int READ_WAIT_MILLIS = 200;
+    private static final int READ_WAIT_MILLIS = 1000;
     private static final int BUFSIZ = 4096;
 
     private final UsbSerialPort mDriver;
@@ -99,6 +99,7 @@ public class SerialInputOutputManager implements Runnable {
     }
 
     public void writeAsync(byte[] data) {
+        Log.d("eaglechat.eaglechat", "writeAsync called with: " + new String(data));
         synchronized (mWriteBuffer) {
             mWriteBuffer.put(data);
         }
@@ -184,6 +185,7 @@ public class SerialInputOutputManager implements Runnable {
                 Log.d(TAG, "Writing data len=" + len);
             }
             mDriver.write(outBuff, READ_WAIT_MILLIS);
+            Log.d(TAG, "finished writing");
         }
     }
 
