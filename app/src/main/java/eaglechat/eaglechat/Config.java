@@ -64,10 +64,9 @@ public class Config {
 
     public static Bitmap bitMatrixToBitmap(Context ctx, BitMatrix bits) {
         Bitmap bitmap = Bitmap.createBitmap(bits.getWidth(), bits.getHeight(), Bitmap.Config.RGB_565);
-        int background = ctx.getResources().getColor(R.color.background_material_light);
         for (int x = 0; x < bits.getWidth(); ++x) {
             for (int y = 0; y < bits.getHeight(); ++y) {
-                bitmap.setPixel(x, y, bits.get(x, y) ? Color.BLACK : background);
+                bitmap.setPixel(x, y, bits.get(x, y) ? Color.BLACK : Color.WHITE);
             }
         }
         return bitmap;
