@@ -24,6 +24,8 @@ gen/
 build/
 *.iml
 **/*.iml
+.idea/modules.xml
+
 
 # Local configuration file (sdk path, etc)
 local.properties
