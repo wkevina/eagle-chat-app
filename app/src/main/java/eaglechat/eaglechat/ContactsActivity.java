@@ -161,6 +161,7 @@ public class ContactsActivity extends CompatListActivity implements LoaderManage
             } else {
                 v = inflater.inflate(R.layout.list_contact_with_message, parent, false);
             }
+            v.setBackgroundResource(android.R.color.white);
             return v;
         }
 

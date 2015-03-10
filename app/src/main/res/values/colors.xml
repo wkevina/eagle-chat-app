@@ -13,5 +13,6 @@
 -->
     <color name="colorMessage1">#ff4dd1d8</color>
     <color name="colorMessage2">#ff418ed8</color>
+    <color name="white">#FFFFFF</color>
 
 </resources>
