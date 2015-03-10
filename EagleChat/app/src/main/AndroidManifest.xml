@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="eaglechat.eaglechat">
+    package="eaglechat.eaglechat" >
 
     <uses-feature android:name="android.hardware.usb.host" />
 
@@ -8,10 +8,10 @@
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:theme="@style/AppTheme">
+        android:theme="@style/AppTheme" >
         <activity
             android:name=".MainActivity"
-            android:label="@string/app_name">
+            android:label="@string/app_name" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -21,18 +21,18 @@
         <activity
             android:name=".ConversationActivity"
             android:label="@string/title_activity_conversation"
-            android:parentActivityName=".ContactsActivity">
+            android:parentActivityName=".ContactsActivity" >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="eaglechat.eaglechat.ContactsActivity" />
         </activity>
         <activity
             android:name=".ContactsActivity"
-            android:label="@string/title_activity_contacts"></activity>
+            android:label="@string/title_activity_contacts" />
         <activity
             android:name=".AddContactActivity"
             android:label="@string/title_activity_add_contact"
-            android:parentActivityName=".ContactsActivity">
+            android:parentActivityName=".ContactsActivity" >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="eaglechat.eaglechat.ContactsActivity" />
@@ -43,38 +43,36 @@
             android:authorities="eaglechat.eaglechat.provider"
             android:enabled="true"
             android:exported="false"
-            android:grantUriPermissions="false"></provider>
+            android:grantUriPermissions="false" />
 
         <activity
             android:name=".MyDetailsActivity"
             android:enabled="true"
             android:label="@string/title_activity_my_details"
             android:parentActivityName=".ContactsActivity"
-            android:windowSoftInputMode="stateUnchanged">
+            android:windowSoftInputMode="stateUnchanged" >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="eaglechat.eaglechat.ContactsActivity" />
         </activity>
         <activity
             android:name=".RegisterActivity"
-            android:label="@string/title_activity_register"></activity>
+            android:label="@string/title_activity_register" />
         <activity
             android:name=".UsbTestActivity"
             android:label="@string/title_activity_usb_test"
-            android:screenOrientation="portrait">
-
+            android:screenOrientation="portrait" >
         </activity>
 
         <receiver
-            android:name=".DeviceAttachedReceiver"
+            android:name=".DeviceConnectionReceiver"
             android:enabled="true"
-            android:exported="true">
+            android:exported="true" >
             <intent-filter>
                 <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
                 <action android:name="android.hardware.usb.action.USB_DEVICE_DETACHED" />
                 <action android:name="eaglechat.eaglechat.USB_PERMISSION" />
             </intent-filter>
-
 
             <meta-data
                 android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
@@ -83,6 +81,12 @@
                 android:name="android.hardware.usb.action.USB_DEVICE_DETACHED"
                 android:resource="@xml/device_filter" />
         </receiver>
+
+        <service
+            android:name=".EagleChatCommService"
+            android:enabled="true"
+            android:exported="false" >
+        </service>
     </application>
 
 </manifest>

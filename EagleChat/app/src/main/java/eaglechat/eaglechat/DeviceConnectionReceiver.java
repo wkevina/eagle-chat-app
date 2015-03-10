@@ -8,17 +8,18 @@ import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
 import android.util.Log;
 
-public class DeviceAttachedReceiver extends BroadcastReceiver {
+public class DeviceConnectionReceiver extends BroadcastReceiver {
     private static final String TAG = "eaglechat.eaglechat";
 
     private static final String ACTION_USB_PERMISSION =
             "eaglechat.eaglechat.USB_PERMISSION";
-
-    public DeviceAttachedReceiver() {
+    private Context mContext;
+    public DeviceConnectionReceiver() {
     }
 
     @Override
     public void onReceive(Context context, Intent intent) {
+        mContext = context;
         String action = intent.getAction();
         if (ACTION_USB_PERMISSION.equals(action)) {
             synchronized (this) {
@@ -50,6 +51,9 @@ public class DeviceAttachedReceiver extends BroadcastReceiver {
 
     private void notifyDeviceAttached(UsbDevice device) {
         Log.d(TAG, "Device attached: " + device);
+        Intent intent = new Intent(mContext, EagleChatCommService.class);
+        intent.putExtra(UsbManager.EXTRA_DEVICE, device);
+        mContext.startService(intent);
     }
 
     private void notifyDeviceDetached() {
