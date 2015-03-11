@@ -8,6 +8,8 @@ import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
 import android.util.Log;
 
+import com.hoho.android.usbserial.driver.UsbId;
+
 public class DeviceConnectionReceiver extends BroadcastReceiver {
     private static final String TAG = "eaglechat.eaglechat";
 
@@ -21,10 +23,13 @@ public class DeviceConnectionReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         mContext = context;
         String action = intent.getAction();
+        Log.d(TAG, action);
+
+        UsbDevice device = (UsbDevice) intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+        Log.d(TAG, "Device: " + device);
+
         if (ACTION_USB_PERMISSION.equals(action)) {
             synchronized (this) {
-                UsbDevice device = (UsbDevice) intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
-
                 if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
                     if (device != null) {
                         notifyDeviceAttached(device);
@@ -36,8 +41,16 @@ public class DeviceConnectionReceiver extends BroadcastReceiver {
         } else {
             if (UsbManager.ACTION_USB_DEVICE_ATTACHED.equals(action)) {
                 UsbManager manager = (UsbManager) context.getSystemService(Context.USB_SERVICE);
-                UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+                // filter devices
+                boolean isEagleChat = device.getProductId() == UsbId.EAGLE_CHAT && device.getVendorId() == UsbId.VENDOR_ATMEL;
+                Log.d(TAG, "Is EagleChat device: " + isEagleChat);
+                if (!isEagleChat) {
+                    Log.d(TAG, "Not an EagleChat device.");
+                    return;
+                }
+
                 if (!manager.hasPermission(device)) { // if we do not have permission to access this device
+                    Log.d(TAG, "Requesting permission to access device.");
                     final PendingIntent permissionIntent = PendingIntent.getBroadcast(context, 0, new Intent(ACTION_USB_PERMISSION), 0);
                     manager.requestPermission(device, permissionIntent); // request it!
                 } else {
