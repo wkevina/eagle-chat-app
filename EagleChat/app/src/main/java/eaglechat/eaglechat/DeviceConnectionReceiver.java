@@ -71,5 +71,7 @@ public class DeviceConnectionReceiver extends BroadcastReceiver {
 
     private void notifyDeviceDetached() {
         Log.d(TAG, "Device detached.");
+        Intent intent = new Intent(mContext, EagleChatCommService.class);
+        mContext.stopService(intent);
     }
 }

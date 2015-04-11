@@ -47,7 +47,7 @@ import java.util.Map;
  */
 public class CdcAcmSerialDriver implements UsbSerialDriver {
 
-    private final String TAG = "eaglechat.eaglechat";
+    private final String TAG = "usbserial";
 
     private final UsbDevice mDevice;
     private final UsbSerialPort mPort;
