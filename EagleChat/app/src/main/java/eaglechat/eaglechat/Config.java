@@ -49,6 +49,11 @@ public class Config {
         return s.toString();
     }
 
+    public static String intToString(int i) {
+        return String.format("%02x", i).toUpperCase();
+        //return Integer.toHexString(i).toUpperCase();
+    }
+
     public static byte[] hexStringToBytes(String s) {
         if (s.length() % 2 != 0) {
             s = "0" + s; // Pad a leading zero if there are an odd number of characters

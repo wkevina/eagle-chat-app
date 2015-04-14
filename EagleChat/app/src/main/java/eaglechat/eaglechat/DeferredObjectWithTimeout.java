@@ -12,10 +12,12 @@ import org.jdeferred.impl.DeferredObject;
 public class DeferredObjectWithTimeout<D, F, P> extends AndroidDeferredObject<D, F, P> {
     protected final Handler mHandler = new Handler();
     protected Runnable mTimeoutRunnable;
+    protected final long mMillis;
 
     public DeferredObjectWithTimeout(long millis, F failWith) {
         super(new DeferredObject<D, F, P>());
 
+        mMillis = millis;
         final F failObject = failWith;
 
         mTimeoutRunnable = new Runnable() {
@@ -26,16 +28,17 @@ public class DeferredObjectWithTimeout<D, F, P> extends AndroidDeferredObject<D,
                 }
             }
         };
-
-        if (millis > 0) {
-            mHandler.postDelayed(mTimeoutRunnable, millis);
-        }
     }
 
+    public void startTimer() {
+        if (mMillis > 0) {
+            mHandler.postDelayed(mTimeoutRunnable, mMillis);
+        }
+    }
 
     @Override
     public Deferred<D, F, P> resolve(D resolve) {
         mHandler.removeCallbacks(mTimeoutRunnable);
-        return resolve(resolve);
+        return super.resolve(resolve);
     }
 }

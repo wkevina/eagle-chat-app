@@ -21,24 +21,24 @@ public class PeregrineTest extends TestCase {
 
     public void testOnData() throws Exception {
         mPeregrine.onData("Unterminated message");
-        assertNull(mPeregrine.mQueue.peek());
+        assertNull(mPeregrine.mInputQueue.peek());
         mPeregrine.onData("\n");
-        assertEquals(mPeregrine.mQueue.isEmpty(), false);
-        assertEquals("Unterminated message", mPeregrine.mQueue.peek());
+        assertEquals(mPeregrine.mInputQueue.isEmpty(), false);
+        assertEquals("Unterminated message", mPeregrine.mInputQueue.peek());
 
         for (int i = 0; i < 255; ++i) {
             mPeregrine.onData("Unterminated message");
             mPeregrine.onData("\n");
         }
 
-        while (!mPeregrine.mQueue.isEmpty()) {
-            assertEquals("Unterminated message", mPeregrine.mQueue.poll());
+        while (!mPeregrine.mInputQueue.isEmpty()) {
+            assertEquals("Unterminated message", mPeregrine.mInputQueue.poll());
         }
     }
 
     public void testFormatSendMessage() throws Exception {
 
-        String msg = new String(mPeregrine.formatSendMessage(10, "This is a message"));
+        String msg = new String(mPeregrine.formatSendCommand(10, "This is a message"));
 
         String test = "s:10:This is a message\n";
 

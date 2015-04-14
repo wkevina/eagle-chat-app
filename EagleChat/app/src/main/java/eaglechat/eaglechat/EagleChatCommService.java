@@ -17,10 +17,8 @@ import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.hoho.android.usbserial.driver.UsbSerialPort;
 import com.hoho.android.usbserial.util.SerialInputOutputManager;
 
-import org.jdeferred.Deferred;
 import org.jdeferred.DoneCallback;
 import org.jdeferred.FailCallback;
-import org.jdeferred.impl.DeferredObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -148,34 +146,35 @@ public class EagleChatCommService extends Service {
 
         onDeviceStateChange();
 
-        final Deferred statusDone = new DeferredObject();
-        statusDone.promise().then(new DoneCallback() {
-            @Override
-            public void onDone(Object result) {
-                mPeregrine.requestStatus().done(new DoneCallback<Integer>() {
-                    @Override
-                    public void onDone(Integer result) {
-                        Log.d(TAG, "Status read again: " + result);
-                    }
-                }).fail(new FailCallback<String>() {
-                    @Override
-                    public void onFail(String result) {
-                        Log.d(TAG, "Failed with: " + result);
-                    }
-                });
-            }
-        });
-
         mPeregrine.requestStatus().done(new DoneCallback<Integer>() {
             @Override
             public void onDone(Integer result) {
                 Log.d(TAG, "Status: " + result);
-                statusDone.resolve(null);
             }
         }).fail(new FailCallback<String>() {
             @Override
             public void onFail(String result) {
                 Log.d(TAG, "Failed with: " + result);
+            }
+        });
+
+        mPeregrine.commandSetId(15).done(new DoneCallback<String>() {
+            @Override
+            public void onDone(String result) {
+                Log.d(TAG, "Set id reply = " + result);
+
+            }
+        }).fail(new FailCallback<String>() {
+            @Override
+            public void onFail(String result) {
+                Log.d(TAG, "Failed with: " + result);
+            }
+        });
+
+        mPeregrine.requestId().done(new DoneCallback<Integer>() {
+            @Override
+            public void onDone(Integer result) {
+                Log.d(TAG, "Request id reply = " + result);
             }
         });
     }

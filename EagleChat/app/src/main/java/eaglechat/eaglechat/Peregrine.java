@@ -5,11 +5,12 @@ import android.util.Log;
 
 import com.hoho.android.usbserial.util.SerialInputOutputManager;
 
+import org.jdeferred.AlwaysCallback;
 import org.jdeferred.Deferred;
 import org.jdeferred.DoneFilter;
 import org.jdeferred.Promise;
-import org.jdeferred.impl.DeferredObject;
 
+import java.util.Deque;
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -28,7 +29,7 @@ public class Peregrine {
     public static final String YES = "YES";
     public static final String NO = "NO";
     public static final String SEND = "s"; // ^s:\d+:.*
-    public static final String SET_ID = "i"; //i:123
+    public static final String ID = "i"; //i:AA
     public static final String SET_KEY = "p"; //p:123:[32 bytes]
     public static final String GET = "g";
     public static final String TAG = "eaglechat.eaglechat";
@@ -37,12 +38,16 @@ public class Peregrine {
 
     private static final String REPLY = "x";
     private static final String FAIL_REPLY = REPLY + DELIM + FAIL;
+    private static final String OK_REPLY = REPLY + DELIM + OK;
     public static final String GET_STATUS_REPLY = "^" + REPLY + DELIM + "[0-9A-F]{2,}";
+    public static final String GET_ID_REPLY = GET_STATUS_REPLY; // Shares format with GET_STATUS_REPLY
+    private static final String SEND_COMMAND_REPLY = "^" + REPLY + DELIM + OK;
 
 
     // get status g:s:255   ^g:s:\d{1,3}
     // get public key g:p:[32 bytes]    ^g:p:.{32}
-    protected final Queue<String> mQueue;
+    protected final Queue<String> mInputQueue;
+    protected final Deque<MessageResolver> mResolverQueue;
     final Handler mHandler = new Handler();
     protected String buffer;
     protected SerialInputOutputManager mSerial;
@@ -52,7 +57,8 @@ public class Peregrine {
     private int statusCount = 0;
 
     public Peregrine() {
-        mQueue = new LinkedList<>();
+        mInputQueue = new LinkedList<>();
+        mResolverQueue = new LinkedList<>();
         buffer = "";
         //statusTest();
         Log.d(TAG, "Created a peregrine. SQUAAAW");
@@ -75,7 +81,7 @@ public class Peregrine {
         int breakIndex;
         while ((breakIndex = buffer.indexOf(END)) != -1) {
             String temp = buffer.substring(0, breakIndex);
-            mQueue.add(temp); // Queue the message string
+            mInputQueue.add(temp); // Queue the message string
             // Reset buffer
             buffer = buffer.substring(breakIndex + 1); // Strip the first message and the END
         }
@@ -84,24 +90,67 @@ public class Peregrine {
 
     private void processQueue() {
 
-        while (!mQueue.isEmpty()) {
+        while (!mInputQueue.isEmpty()) {
 
-            String head = mQueue.remove();
+            String currentMessage = mInputQueue.remove();
 
-            Log.d(TAG, "processQueue: Head: " + head);
+            Log.d(TAG, "processQueue: Head: " + currentMessage);
 
-            if (mResolver != null && !mResolver.isDone()) {
-                mResolver.filter(head);
-            } else {
-                mResolver = null; // if mResolver is done, get rid of it
+            // Handle incoming messages here
+
+
+            // Service deferred tasks
+            if (!mResolverQueue.isEmpty()) {
+
+                Log.d(TAG, "ResolverQueue is not empty");
+
+                // If there are resolvers
+                MessageResolver headResolver = null;
+
+                // Clear out finished resolvers, probably due to timeout
+                while (!mResolverQueue.isEmpty()) {
+
+                    headResolver = mResolverQueue.peek();
+
+                    if (headResolver.isDone()) {
+                        Log.d(TAG, "Removing head resolver.");
+                        mResolverQueue.remove();
+                    }
+                    else
+                        break;
+                }
+
+                headResolver = mResolverQueue.peek();
+                if (headResolver != null) {
+                    boolean clearResolver = headResolver.filter(currentMessage);
+                    if (clearResolver) {
+                        mResolverQueue.remove();
+                        Log.d(TAG, "Clearing recently resolved resolver.");
+                    }
+                }
+
             }
         }
     }
 
-    // Get promise that resolves to the peripherals status flags
+
+    private byte[] formatStatusRequest() {
+        return ("g:s" + END).getBytes();
+    }
+
+
+    /**
+     * Sends status request to peripheral, returns Promise that resolves to that value
+     *
+     * @return Promise which resolves to status flags of peripheral
+     */
     public Promise<Integer, String, String> requestStatus() {
 
-        mResolver = new MessageResolver(new MessageResolverFilter() {
+        byte[] statusRequestBytes = formatStatusRequest();
+
+        Promise<String,String,String> statusPromise;
+
+        statusPromise = deferredWrite(statusRequestBytes, new MessageResolverFilter() {
             @Override
             public int filter(String msg) {
                 if (!msg.startsWith(REPLY)) {
@@ -111,8 +160,7 @@ public class Peregrine {
                 if (msg.contains(FAIL_REPLY)) {
                     Log.d(TAG, "Reply was a fail message.");
                     return REJECT;
-                }
-                else if (msg.matches(GET_STATUS_REPLY)) {
+                } else if (msg.matches(GET_STATUS_REPLY)) {
                     Log.d(TAG, "Reply valid, resolving promise.");
                     return RESOLVE;
                 }
@@ -121,19 +169,11 @@ public class Peregrine {
 
                 return SKIP;
             }
-        }, TIMEOUT_AFTER);
+        });
 
-        Promise<String,String,String> p = mResolver.getPromise();
+        return statusPromise.then(new DoneFilter<String, Integer>() {
 
-        if (mSerial != null) {
-            mSerial.writeAsync(formatGetStatus());
-        } else {
-            mResolver.cancel("NO DEVICE CONNECTED");
-        }
-
-        return p.then(new DoneFilter<String, Integer>() {
-
-            // De-hexilify result
+            // De-hexlify result
             @Override
             public Integer filterDone(String result) {
                 String chunks[] = result.split(DELIM);
@@ -143,22 +183,179 @@ public class Peregrine {
 
     }
 
-
-    private byte[] formatGetStatus() {
-        return ("g:s" + END).getBytes();
-    }
-
-    private byte[] formatGetStatusDebug(boolean fail, boolean timeout) {
-        if (fail) {
-            return ("g:s:f" + END).getBytes();
-        } else if (timeout) {
-            return ("g:s:t" + END).getBytes();
+    private void writeOrCancel(byte[] msg, MessageResolver resolver) {
+        if (mSerial != null) {
+            mSerial.writeAsync(msg);
+        } else {
+            resolver.cancel("NO DEVICE CONNECTED");
         }
-        return ("g:s" + END).getBytes();
     }
 
-    public byte[] formatSendMessage(int dest, String message) {
+
+
+    public byte[] formatSendCommand(int dest, String message) {
         return (SEND + DELIM + String.valueOf(dest) + DELIM + message + END).getBytes();
+    }
+
+    /**
+     * Requests the peripheral to send a message to another node
+     *
+     * @param dest
+     * @param message
+     * @return
+     */
+    public Promise<String, String, String> commandSendMessage(int dest, String message) {
+
+        if (dest > 254 || dest < 1) {
+            throw new IllegalArgumentException("dest must be in range of 1-254");
+        }
+
+        byte[] sendMessageBytes = formatSendCommand(dest, message);
+
+        Promise<String,String,String> sendMessagePromise;
+
+        sendMessagePromise = deferredWrite(sendMessageBytes, new MessageResolverFilter() {
+            @Override
+            public int filter(String msg) {
+                if (!msg.startsWith(REPLY)) {
+                    Log.d(TAG, "Reply doesn't match format.");
+                    return SKIP;
+                }
+                if (msg.contains(FAIL_REPLY)) {
+                    Log.d(TAG, "Reply was a fail message.");
+                    return REJECT;
+                } else if (msg.matches(SEND_COMMAND_REPLY)) {
+                    Log.d(TAG, "Reply valid, resolving promise.");
+                    return RESOLVE;
+                }
+
+                Log.d(TAG, "Skipping message.");
+
+                return SKIP;
+            }
+        });
+
+        return sendMessagePromise;
+    }
+
+    public byte[] formatSetIdCommand(int nodeId) {
+        return (ID + DELIM + Config.intToString(nodeId) + END).getBytes();
+    }
+
+    /**
+     * Sets the node id of the peripheral
+     * @param nodeId
+     * @return
+     */
+    public Promise<String,String,String> commandSetId(int nodeId) {
+
+        if (nodeId > 254 || nodeId <= 0) {
+            throw new IllegalArgumentException("nodeId must be in range of 0-254");
+        }
+
+        Promise<String,String,String> setIdPromise;
+
+        byte[] setIdMessage = formatSetIdCommand(nodeId);
+
+        setIdPromise = deferredWrite(setIdMessage, new MessageResolverFilter() {
+            @Override
+            public int filter(String msg) {
+                if (!msg.startsWith(REPLY)) {
+                    Log.d(TAG, "Reply doesn't match format.");
+                    return SKIP;
+                }
+                if (msg.contains(FAIL_REPLY)) {
+                    Log.d(TAG, "Reply was a fail message.");
+                    return REJECT;
+                } else if (msg.matches(OK_REPLY)) {
+                    Log.d(TAG, "Reply valid, resolving promise.");
+                    return RESOLVE;
+                }
+
+                Log.d(TAG, "Skipping message.");
+
+                return SKIP;
+            }
+        });
+
+        return setIdPromise;
+
+    }
+
+    public Promise<Integer,String,String> requestId() {
+
+        Promise<String,String,String> requestIdPromise;
+
+        byte[] requestIdMessage = formatIdRequest();
+
+        requestIdPromise = deferredWrite(requestIdMessage, new MessageResolverFilter() {
+            @Override
+            public int filter(String msg) {
+                if (!msg.startsWith(REPLY)) {
+                    Log.d(TAG, "Reply doesn't match format.");
+                    return SKIP;
+                }
+                if (msg.contains(FAIL_REPLY)) {
+                    Log.d(TAG, "Reply was a fail message.");
+                    return REJECT;
+                } else if (msg.matches(GET_ID_REPLY)) {
+                    Log.d(TAG, "Reply valid, resolving promise.");
+                    return RESOLVE;
+                }
+
+                Log.d(TAG, "Skipping message.");
+
+                return SKIP;
+            }
+        });
+
+        return requestIdPromise.then(new DoneFilter<String, Integer>() {
+            @Override
+            public Integer filterDone(String result) {
+                result = result.split(DELIM)[1];
+                return Integer.parseInt(result, 16);
+            }
+        });
+    }
+
+    private byte[] formatIdRequest() {
+        return (GET + DELIM + ID + END).getBytes();
+    }
+
+    private Promise<String,String,String> deferredWrite(byte[] toPeripheral, MessageResolverFilter filter) {
+
+        final MessageResolver writeResolver = new MessageResolver(filter, TIMEOUT_AFTER);
+        final byte[] messageBytes = toPeripheral;
+
+        // Get the most recently added resolver
+        MessageResolver lastResolver = mResolverQueue.peekLast();
+
+        if (lastResolver != null && !lastResolver.isDone()) { // get in line behind other request
+            Log.d(TAG, "Queuing write operation.");
+            lastResolver.getPromise().always(new AlwaysCallback<String, String>() {
+
+                @Override
+                public void onAlways(Promise.State state, String resolved, String rejected) {
+
+                    writeOrCancel(messageBytes, writeResolver);
+                    writeResolver.startTimer();
+
+                }
+
+            });
+
+        } else {
+            Log.d(TAG, "Writing immediately.");
+
+            writeOrCancel(messageBytes, writeResolver);
+            writeResolver.startTimer();
+
+        }
+
+        // Queue the resolver
+        mResolverQueue.offer(writeResolver);
+
+        return writeResolver.getPromise();
     }
 
     public byte[] formatSendPublicKey(int dest, byte[] key) {
@@ -194,7 +391,7 @@ public class Peregrine {
             mDeferred.reject(reason);
         }
 
-        public void filter(String msg) {
+        public boolean filter(String msg) {
             if (mDeferred.isPending()) {
                 int result = mFilter.filter(msg);
 
@@ -203,14 +400,20 @@ public class Peregrine {
                 switch (result) {
                     case MessageResolverFilter.RESOLVE:
                         mDeferred.resolve(msg);
-                        break;
+                        return true;
                     case MessageResolverFilter.REJECT:
                         mDeferred.reject(msg);
-                        break;
+                        return true;
                     case MessageResolverFilter.SKIP:
-                        break;
+                        return false;
                 }
             }
+            return true;
+        }
+
+        public void startTimer() {
+            if (mDeferred.isPending())
+                mDeferred.startTimer();
         }
 
         public boolean isDone() {
@@ -220,11 +423,11 @@ public class Peregrine {
 
 }
 
-    // protected Promise requestStatus() {};
+// protected Promise requestStatus() {};
 
-    // protected Promise sendMessage(int dest, String message);
+// protected Promise sendMessage(int dest, String message);
 
-    // protected Promise getPublicKey();
+// protected Promise getPublicKey();
 
-    //
+//
 
