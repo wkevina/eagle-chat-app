@@ -29,6 +29,10 @@ dependencies {
     compile 'com.google.zxing:android-core:3.2.0'
     compile 'com.google.guava:guava:18.0'
     compile 'com.melnykov:floatingactionbutton:1.2.0'
+    //compile 'org.jdeferred:jdeferred-core:1.2.3'
+    compile 'org.jdeferred:jdeferred-android-aar:1.2.3'
     compile project(':usbSerialForAndroid')
     testCompile 'junit:junit:4.12'
+    testCompile 'org.jdeferred:jdeferred-android-aar:1.2.3'
+    //testCompile 'org.jdeferred:jdeferred-core:1.2.3'
 }
