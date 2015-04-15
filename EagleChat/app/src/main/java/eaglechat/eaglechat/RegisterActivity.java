@@ -2,29 +2,31 @@ package eaglechat.eaglechat;
 
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.support.v7.app.ActionBarActivity;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.melnykov.fab.FloatingActionButton;
 
+import org.jdeferred.DoneCallback;
+import org.jdeferred.DonePipe;
+import org.jdeferred.Promise;
 import org.spongycastle.util.encoders.Base64;
 
 import java.security.SecureRandom;
 
 
-public class RegisterActivity extends ActionBarActivity {
+public class RegisterActivity extends PeregrineActivity {
+
     EditText mNameText, mNetworkIdText;
     TextView mKeyLabel;
     FloatingActionButton mDoneButton;
-    Button mGenerateButton;
-
     String mPublicKey;
+    private EditText mPasswordText;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -32,12 +34,11 @@ public class RegisterActivity extends ActionBarActivity {
         setContentView(R.layout.activity_register);
 
         mNameText = (EditText) findViewById(R.id.text_name);
+        mPasswordText = (EditText) findViewById(R.id.text_password);
         mNetworkIdText = (EditText) findViewById(R.id.text_id);
         mKeyLabel = (TextView) findViewById(R.id.text_publicKey);
 
         mDoneButton = (FloatingActionButton) findViewById(R.id.button_submit);
-
-        mGenerateButton = (Button) findViewById(R.id.button_generateKeys);
 
         mDoneButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -45,13 +46,16 @@ public class RegisterActivity extends ActionBarActivity {
                 submit();
             }
         });
+    }
 
-        mGenerateButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                dummyEncryptionSetup(); // this is not what we would do in production
-            }
-        });
+    @Override
+    void onPeregrineAvailable() {
+
+    }
+
+    @Override
+    void onPeregrineUnavailable() {
+
     }
 
     private void submit() {
@@ -63,25 +67,74 @@ public class RegisterActivity extends ActionBarActivity {
             mNameText.setError("Enter a name");
         }
 
-        String networkIdString = null;
-        try {
-            int networkId = Integer.parseInt(mNetworkIdText.getText().toString(), 16) & 0xFFFF;
-            networkIdString = Integer.toHexString(networkId);
-            networkIdString = Config.padHex(networkIdString, 4);
-        } catch (NumberFormatException ex) {
-            isReady = false;
+        String networkIdString = mNetworkIdText.getText().toString();
+        if (!EagleChatConfiguration.validateNodeId(networkIdString)) {
             mNetworkIdText.setError("Invalid ID");
+            isReady = false;
         }
 
-        if (mPublicKey == null || mPublicKey.isEmpty()) {
+        String passwordString = mPasswordText.getText().toString();
+        String passwordHash = null;
+        if (passwordString.isEmpty() || passwordString.length() < 4) {
             isReady = false;
-            Toast.makeText(this, "You must generate encryption keys", Toast.LENGTH_LONG).show();
+            mPasswordText.setError("Invalid password");
+        } else {
+            passwordHash = EagleChatConfiguration.getPasswordHash(passwordString);
+            Log.d(TAG, "Hash: " + passwordHash);
         }
 
         if (isReady) {
-            writeData(name, networkIdString, mPublicKey);
-            Config.restart(this);
-            finish();
+
+            final String nodeId = networkIdString;
+
+            if (peregrineAvailable()) {
+
+                getPeregrine().commandSetPassword(passwordHash)
+
+                        .then(new DoneCallback<String>() {
+                            @Override
+                            public void onDone(String result) {
+                                Log.d(TAG, "Password set.");
+                            }
+                        })
+                        .then(new DonePipe<String, String, String, String>() {
+                            @Override
+                            public Promise<String, String, String> pipeDone(String result) {
+                                return mPeregrine.commandSetId(nodeId);
+                            }
+                        })
+                        .then(new DonePipe<String, String, String, String>() {
+                            @Override
+                            public Promise<String, String, String> pipeDone(String result) {
+                                return mPeregrine.commandGenerateKeys();
+                            }
+                        })
+                        .then(new DonePipe<String, String, String, String>() {
+                            @Override
+                            public Promise<String, String, String> pipeDone(String result) {
+                                return mPeregrine.commandCommit();
+                            }
+                        })
+                        .then(new DonePipe<String, Integer, String, String>() {
+                            @Override
+                            public Promise<Integer, String, String> pipeDone(String result) {
+                                return mPeregrine.requestStatus();
+                            }
+                        })
+                        .done(new DoneCallback<Integer>() {
+                            @Override
+                            public void onDone(Integer result) {
+                                Log.d(TAG, "Status: " + result);
+                                Toast.makeText(RegisterActivity.this, "Successfully registered", Toast.LENGTH_SHORT).show();
+                            }
+                        });
+            } else {
+                Toast.makeText(this, "EagleChat device unavailable", Toast.LENGTH_SHORT).show();
+            }
+
+            //writeData(name, networkIdString, mPublicKey);
+            //Util.restart(this);
+            //finish();
         }
 
     }
@@ -90,9 +143,8 @@ public class RegisterActivity extends ActionBarActivity {
         SharedPreferences.Editor editor = getSharedPreferences(getString(R.string.shared_prefs_file), MODE_PRIVATE).edit();
 
         editor
-                .putString(Config.NAME, name)
-                .putString(Config.NETWORK_ID, id)
-                .putString(Config.PUBLIC_KEY, key)
+                .putString(Util.NAME, name)
+                .putString(Util.NETWORK_ID, id)
                 .commit();
     }
 
@@ -122,10 +174,10 @@ public class RegisterActivity extends ActionBarActivity {
         if (mNetworkIdText.getText().toString().isEmpty()) { // If no id has been supplied by the user
             byte[] networkId = new byte[2];
             r.nextBytes(networkId);
-            mNetworkIdText.setText(Config.bytesToString(networkId, ""));
+            mNetworkIdText.setText(Util.bytesToString(networkId, ""));
         }
 
-        mKeyLabel.setText(Config.bytesToString(publicKey, " "));
+        mKeyLabel.setText(Util.bytesToString(publicKey, " "));
         mPublicKey = Base64.toBase64String(publicKey);
     }
 

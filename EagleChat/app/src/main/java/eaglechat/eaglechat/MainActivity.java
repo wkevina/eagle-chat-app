@@ -1,42 +1,156 @@
 package eaglechat.eaglechat;
 
-import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.TextView;
+import android.widget.Toast;
 
+import org.jdeferred.DoneCallback;
+import org.jdeferred.DonePipe;
+import org.jdeferred.FailCallback;
+import org.jdeferred.Promise;
 import org.spongycastle.util.encoders.Base64;
 
-import java.security.Provider;
 import java.security.Security;
-import java.util.Iterator;
-import java.util.Set;
-import java.util.TreeSet;
 
-public class MainActivity extends Activity {
+public class MainActivity extends PeregrineActivity {
+
+    private static final String TAG = "eaglechat.eaglechat";
+
     private final int STATE_LAUNCH_LIST_ACTIVITY = 0;
     private final int STATE_LAUNCH_CONTACTS_ACTIVITY = 1;
     private final int STATE_LAUNCH_DETAILS_ACTIVITY = 2;
     private final int STATE_LAUNCH_REGISTER_ACTIVITY = 3;
     private final int STATE_LAUNCH_USB_ACTIVITY = 4;
 
+    EagleChatConfiguration mEagleConfig;
     private int mState = 0;
 
     static {
         Security.insertProviderAt(new org.spongycastle.jce.provider.BouncyCastleProvider(), 1);
     }
 
+    private TextView mStatusTextView;
+    private String mPublicKey;
+    private int mNodeId;
+
+    /**
+     * Fetches configuration status from EagleChat board
+     */
+    private void retrievePeripheralStatus() {
+        getPeregrine().requestStatus()
+                .done(new DoneCallback<Integer>() {
+
+                    @Override
+                    public void onDone(Integer result) {
+
+                        Log.d(TAG, "Peripheral status = " + result);
+
+                        mStatusTextView.setText(getString(R.string.status_checkingConfiguration));
+
+                        mEagleConfig = new EagleChatConfiguration(result);
+
+                        if (mEagleConfig.isConfigured()) {
+
+                            // launch get public key and node id commands to see if this is a known board
+                            Log.d(TAG, "EagleChat configured. Should authenticate.");
+                            showAuthenticationScreen();
+                            //getIdentifiers();
+
+                        } else {
+
+                            Log.d(TAG, "EagleChat not configured.");
+                            Log.d(TAG, "hasNodeId = " + mEagleConfig.hasNodeId());
+                            Log.d(TAG, "hasPassword = " + mEagleConfig.hasPassword());
+                            Log.d(TAG, "hasKeyPair = " + mEagleConfig.hasKeyPair());
+                            Log.d(TAG, "isConfigured = " + mEagleConfig.isConfigured());
+
+                            handleLaunchRegisterActivity();
+                        }
+                    }
+
+                })
+                .fail(new FailCallback<String>() {
+
+                    @Override
+                    public void onFail(String result) {
+                        Log.d(TAG, "Checking status failed. Result = " + result);
+                    }
+
+                });
+    }
+
+    private void showAuthenticationScreen() {
+        // Remove spinner and show password box
+
+    }
+
+    private void authenticatePeripheral() {
+        // Send password to device and try to authenticate
+    }
+
+    private void getIdentifiers() {
+        getPeregrine().requestPublicKey().then(new DonePipe<String, Integer, String, String>() {
+            @Override
+            public Promise<Integer, String, String> pipeDone(String result) {
+                mPublicKey = result;
+                return mPeregrine.requestId();
+            }
+        }).done(new DoneCallback<Integer>() {
+            @Override
+            public void onDone(Integer result) {
+                mNodeId = result;
+                compareCredentials();
+            }
+        }).fail(new FailCallback<String>() {
+            @Override
+            public void onFail(String result) {
+                mStatusTextView.setText("Cannot communicate with EagleChat device");
+            }
+        });
+    }
+
+    private void compareCredentials() {
+        // Compare public key and node id to
+        SharedPreferences prefs = getSharedPreferences(getString(R.string.shared_prefs_file), Context.MODE_PRIVATE);
+
+        String ourPublicKey = prefs.getString(Util.PUBLIC_KEY, "");
+        int ourNodeId = prefs.getInt(Util.PUBLIC_KEY, 255);
+
+        if (ourPublicKey.contentEquals(mPublicKey) && ourNodeId == mNodeId) {
+            // we totally know this board
+            // do the right thing here
+            // probably try to authenticate
+
+        }
+        /*
+        return prefs.contains(Util.PUBLIC_KEY)
+                && prefs.contains(Util.NETWORK_ID)
+                && prefs.contains(Util.NAME);
+                */
+    }
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
 
-        mState = determineState();
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+
+        mStatusTextView = (TextView) findViewById(R.id.statusText);
+
+
+        //mState = determineState();
 
         //mState = STATE_LAUNCH_USB_ACTIVITY;
 
+        /*
         switch (mState) {
             case STATE_LAUNCH_LIST_ACTIVITY:
                 handleLaunchListActivity();
@@ -56,7 +170,20 @@ public class MainActivity extends Activity {
             default:
                 finish();
                 break;
+
         }
+        */
+    }
+
+
+    @Override
+    void onPeregrineAvailable() {
+        retrievePeripheralStatus();
+    }
+
+    @Override
+    void onPeregrineUnavailable() {
+
     }
 
     private void handleLaunchUsbActivity() {
@@ -72,7 +199,7 @@ public class MainActivity extends Activity {
     }
 
     private int determineState() {
-        if (!Config.isSetup(this)) {
+        if (!Util.isSetup(this)) {
             return STATE_LAUNCH_REGISTER_ACTIVITY;
         }
         return STATE_LAUNCH_CONTACTS_ACTIVITY;
@@ -93,8 +220,8 @@ public class MainActivity extends Activity {
     private void handleLaunchDetailsActivity() {
         SharedPreferences prefs = getSharedPreferences(getString(R.string.shared_prefs_file), MODE_PRIVATE);
         Intent activityIntent = new Intent(this, MyDetailsActivity.class);
-        activityIntent.putExtra(Config.PUBLIC_KEY, Base64.decode(prefs.getString(Config.PUBLIC_KEY, "")));
-        activityIntent.putExtra(Config.NETWORK_ID, Base64.decode(prefs.getString(Config.NETWORK_ID, "")));
+        activityIntent.putExtra(Util.PUBLIC_KEY, Base64.decode(prefs.getString(Util.PUBLIC_KEY, "")));
+        activityIntent.putExtra(Util.NETWORK_ID, Base64.decode(prefs.getString(Util.NETWORK_ID, "")));
 
         startActivity(activityIntent);
         finish();
@@ -118,54 +245,5 @@ public class MainActivity extends Activity {
         return super.onOptionsItemSelected(item);
     }
 
-    public void listSupportedAlgorithms() {
-        String result = "";
 
-        // get all the providers
-        Provider[] providers = Security.getProviders();
-
-        for (int p = 0; p < providers.length; p++) {
-            // get all service types for a specific provider
-            Set<Object> ks = providers[p].keySet();
-            Set<String> servicetypes = new TreeSet<String>();
-            for (Iterator<Object> it = ks.iterator(); it.hasNext(); ) {
-                String k = it.next().toString();
-                k = k.split(" ")[0];
-                if (k.startsWith("Alg.Alias."))
-                    k = k.substring(10);
-
-                servicetypes.add(k.substring(0, k.indexOf('.')));
-            }
-
-            // get all algorithms for a specific service type
-            int s = 1;
-            for (Iterator<String> its = servicetypes.iterator(); its.hasNext(); ) {
-                String stype = its.next();
-                Set<String> algorithms = new TreeSet<String>();
-                for (Iterator<Object> it = ks.iterator(); it.hasNext(); ) {
-                    String k = it.next().toString();
-                    k = k.split(" ")[0];
-                    if (k.startsWith(stype + "."))
-                        algorithms.add(k.substring(stype.length() + 1));
-                    else if (k.startsWith("Alg.Alias." + stype + "."))
-                        algorithms.add(k.substring(stype.length() + 11));
-                }
-
-                int a = 1;
-                for (Iterator<String> ita = algorithms.iterator(); ita.hasNext(); ) {
-                    result += ("[P#" + (p + 1) + ":" + providers[p].getName() + "]" +
-                            "[S#" + s + ":" + stype + "]" +
-                            "[A#" + a + ":" + ita.next() + "]\n");
-                    a++;
-                }
-
-                s++;
-            }
-        }
-
-        for (String s : result.split("\n")) {
-            Log.d("EC", s);
-        }
-
-    }
 }

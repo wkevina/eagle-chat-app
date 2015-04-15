@@ -15,7 +15,7 @@ import java.security.NoSuchAlgorithmException;
 /**
  * Created by kevinward on 2/20/15.
  */
-public class Config {
+public class Util {
     private static final String BASE = "eaglechat.eaglechat.";
 
     public static final String PUBLIC_KEY = BASE + "public_key";
@@ -24,18 +24,24 @@ public class Config {
 
     public static final String NAME = BASE + "name";
 
+
     public static String fingerprint(byte[] key, byte[] address) {
+        return fingerprint(key, address, ":");
+    }
+
+    public static String fingerprint(byte[] key, byte[] address, String delimiter) {
         try {
             MessageDigest sha256 = MessageDigest.getInstance("sha256");
             sha256.update(key);
             sha256.update(address);
             byte[] hash = sha256.digest();
-            String fingerprint = bytesToString(hash, ":").substring(0, 3 * 4 - 1);
+            String fingerprint = bytesToString(hash, delimiter).substring(0, 3 * 4 - 1);
             return fingerprint;
         } catch (NoSuchAlgorithmException ex) {
             return "";
         }
     }
+
 
     public static String bytesToString(byte[] bytes, String separator) {
         StringBuilder s = new StringBuilder();
@@ -49,11 +55,6 @@ public class Config {
         return s.toString();
     }
 
-    public static String intToString(int i) {
-        return String.format("%02x", i).toUpperCase();
-        //return Integer.toHexString(i).toUpperCase();
-    }
-
     public static byte[] hexStringToBytes(String s) {
         if (s.length() % 2 != 0) {
             s = "0" + s; // Pad a leading zero if there are an odd number of characters
@@ -65,6 +66,12 @@ public class Config {
                     + Character.digit(s.charAt(i + 1), 16));
         }
         return data;
+    }
+
+
+    public static String intToString(int i) {
+        return String.format("%02x", i).toUpperCase();
+        //return Integer.toHexString(i).toUpperCase();
     }
 
     public static Bitmap bitMatrixToBitmap(Context ctx, BitMatrix bits) {
@@ -98,9 +105,9 @@ public class Config {
 
     public static boolean isSetup(Context ctx) {
         SharedPreferences prefs = ctx.getSharedPreferences(ctx.getString(R.string.shared_prefs_file), Context.MODE_PRIVATE);
-        return prefs.contains(Config.PUBLIC_KEY)
-                && prefs.contains(Config.NETWORK_ID)
-                && prefs.contains(Config.NAME);
+        return prefs.contains(Util.PUBLIC_KEY)
+                && prefs.contains(Util.NETWORK_ID)
+                && prefs.contains(Util.NAME);
 
     }
 
@@ -116,35 +123,8 @@ public class Config {
         return s;
     }
 
-    /**
-     * Returns true or false if the network ID string is in the correct format. This is the de-facto
-     * specification for the network ID strings.
-     *
-     * Network IDs must be no more than 4 characters long, and must encode a number in hexadecimal format.
-     * That means valid characters are 0-9|A-F.
-     *
-     * @param s
-     * @return
-     */
-    public static boolean validateNetworkId(String s) {
-        if (s.length() > 4) {
-            return false;
-        }
-        try {
-            int i = Integer.parseInt(s, 16);
-        } catch (NumberFormatException ex) {
-            return false;
-        }
-        return true;
-    }
-
     public static String stripSeparators(String s) {
         return s.replaceAll("[: ]", "");
     }
 
-    public static boolean validateHexKeyString(String s) {
-        s = stripSeparators(s);
-
-        return s.length() == 2*32;
-    }
 }

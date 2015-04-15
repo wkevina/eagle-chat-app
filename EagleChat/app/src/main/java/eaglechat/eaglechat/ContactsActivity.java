@@ -7,17 +7,14 @@ import android.content.Intent;
 import android.content.Loader;
 import android.database.Cursor;
 import android.os.Bundle;
-import android.util.AttributeSet;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
 import android.widget.ListAdapter;
 import android.widget.ListView;
-import android.widget.RelativeLayout;
 import android.widget.SimpleCursorAdapter;
 import android.widget.TextView;
 
@@ -75,7 +72,7 @@ public class ContactsActivity extends CompatListActivity implements LoaderManage
 
         switch (id) {
             case R.id.action_burn:
-                Config.burn(this);
+                Util.burn(this);
                 finish();
                 return true;
             case R.id.action_my_details:

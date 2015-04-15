@@ -86,13 +86,13 @@ public class AddContactActivity extends ActionBarActivity {
     private void onInputUpdated() {
         String pubHex = mPublicKeyText.getText().toString();
         String idHex = mNetworkIdText.getText().toString();
-        boolean isFilledOut = Config.validateHexKeyString(pubHex) &&
-                Config.validateNetworkId(idHex);
+        boolean isFilledOut = EagleChatConfiguration.validatePublicKey(pubHex) &&
+                EagleChatConfiguration.validateNodeId(idHex);
         if (isFilledOut) {
-            byte[] pubKeyBytes = Config.hexStringToBytes(Config.stripSeparators(pubHex));
+            byte[] pubKeyBytes = Util.hexStringToBytes(Util.stripSeparators(pubHex));
             mPublicKey = Base64.toBase64String(pubKeyBytes); // Decode and recode public key
-            byte[] idBytes = Config.hexStringToBytes(Config.padHex(idHex, 4));
-            mScanButton.setText("Fingerprint: " + Config.fingerprint(pubKeyBytes, idBytes));
+            byte[] idBytes = Util.hexStringToBytes(Util.padHex(idHex, 4));
+            mScanButton.setText("Fingerprint: " + Util.fingerprint(pubKeyBytes, idBytes));
         }
     }
 
@@ -125,10 +125,11 @@ public class AddContactActivity extends ActionBarActivity {
             Toast.makeText(this, "Not an EagleChat code", Toast.LENGTH_LONG).show();
             return;
         }
-        String networkId = Config.padHex(chunks[1], 4); // Decode the network ID from chunk #2
+
+        String networkId = Util.padHex(chunks[1], 2); // Decode the network ID from chunk #2
         byte[] publicKeyBytes = Base64.decode(chunks[2]); // Decode the public key from chunk #3
 
-        if (!Config.validateNetworkId(networkId)) {
+        if (!EagleChatConfiguration.validateNodeId(networkId)) {
             Toast.makeText(this, "Invalid network ID", Toast.LENGTH_LONG).show();
             return;
         }
@@ -142,14 +143,14 @@ public class AddContactActivity extends ActionBarActivity {
             mNameText.setText(chunks[3]);
         }
         mPublicKey = Base64.toBase64String(publicKeyBytes);
-        mPublicKeyText.setText(Config.bytesToString(publicKeyBytes, " "));
+        mPublicKeyText.setText(Util.bytesToString(publicKeyBytes, " "));
         mNetworkIdText.setText(networkId);
-        mScanButton.setText("Fingerprint: " + Config.fingerprint(publicKeyBytes, Config.hexStringToBytes(networkId)));
+        mScanButton.setText("Fingerprint: " + Util.fingerprint(publicKeyBytes, Util.hexStringToBytes(networkId)));
     }
 
     private void submit() {
         String contactName = mNameText.getText().toString();
-        String networkId = Config.padHex(mNetworkIdText.getText().toString(), 4);
+        String networkId = Util.padHex(mNetworkIdText.getText().toString(), 2);
 
         boolean doesValidate = true;
 
@@ -160,7 +161,7 @@ public class AddContactActivity extends ActionBarActivity {
         if (networkId.isEmpty()) {
             mNetworkIdText.setError("Enter network ID");
             doesValidate = false;
-        } else if (!Config.validateNetworkId(networkId)) {
+        } else if (!EagleChatConfiguration.validateNodeId(networkId)) {
             mNetworkIdText.setError("Contains invalid characters. Must be hex-format number.");
             doesValidate = false;
         }
@@ -211,7 +212,7 @@ public class AddContactActivity extends ActionBarActivity {
 
         switch (id) {
             case R.id.action_burn:
-                Config.burn(this);
+                Util.burn(this);
                 finish();
                 return true;
             case R.id.action_my_details:

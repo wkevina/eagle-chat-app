@@ -54,12 +54,12 @@ public class MyDetailsActivity extends ActionBarActivity {
         mKeyText = (TextView) findViewById(R.id.text_publicKey);
         mNetworkIdText = (TextView) findViewById(R.id.text_address);
 
-        Log.d(getPackageName(), String.format("Public key=%s", Config.bytesToString(mPublicKey, ":")));
+        Log.d(getPackageName(), String.format("Public key=%s", eaglechat.eaglechat.Util.bytesToString(mPublicKey, ":")));
 
-        String f = Config.fingerprint(mPublicKey, Config.hexStringToBytes(mNetworkId));
+        String f = eaglechat.eaglechat.Util.fingerprint(mPublicKey, eaglechat.eaglechat.Util.hexStringToBytes(mNetworkId));
         mFingerPrintText.setText(f);
 
-        mKeyText.setText(Config.bytesToString(mPublicKey, " "));
+        mKeyText.setText(eaglechat.eaglechat.Util.bytesToString(mPublicKey, " "));
 
         mNetworkIdText.setText(mNetworkId);
 
@@ -77,9 +77,9 @@ public class MyDetailsActivity extends ActionBarActivity {
         if (args == null) {
             finish(); // bail!
         }
-        mPublicKey = args.getByteArray(Config.PUBLIC_KEY);
-        mNetworkId = args.getString(Config.NETWORK_ID);
-        mName = args.getString(Config.NAME);
+        mPublicKey = args.getByteArray(eaglechat.eaglechat.Util.PUBLIC_KEY);
+        mNetworkId = args.getString(eaglechat.eaglechat.Util.NETWORK_ID);
+        mName = args.getString(eaglechat.eaglechat.Util.NAME);
     }
 
     @Override
@@ -98,7 +98,7 @@ public class MyDetailsActivity extends ActionBarActivity {
 
         switch (id) {
             case R.id.action_burn:
-                Config.burn(this);
+                eaglechat.eaglechat.Util.burn(this);
                 finish();
                 return true;
         }
@@ -130,7 +130,7 @@ public class MyDetailsActivity extends ActionBarActivity {
             return;
         }
 
-        Bitmap qrCode = Config.bitMatrixToBitmap(this, bits);
+        Bitmap qrCode = eaglechat.eaglechat.Util.bitMatrixToBitmap(this, bits);
         mQRCodeView.setImageBitmap(qrCode);
     }
 
@@ -145,9 +145,9 @@ public class MyDetailsActivity extends ActionBarActivity {
             String filename = activity.getString(R.string.shared_prefs_file);
             SharedPreferences prefs = activity.getSharedPreferences(filename, MODE_PRIVATE);
             Intent activityIntent = new Intent(activity, MyDetailsActivity.class);
-            activityIntent.putExtra(Config.PUBLIC_KEY, Base64.decode(prefs.getString(Config.PUBLIC_KEY, "")));
-            activityIntent.putExtra(Config.NETWORK_ID, prefs.getString(Config.NETWORK_ID, ""));
-            activityIntent.putExtra(Config.NAME, prefs.getString(Config.NAME, ""));
+            activityIntent.putExtra(eaglechat.eaglechat.Util.PUBLIC_KEY, Base64.decode(prefs.getString(eaglechat.eaglechat.Util.PUBLIC_KEY, "")));
+            activityIntent.putExtra(eaglechat.eaglechat.Util.NETWORK_ID, prefs.getString(eaglechat.eaglechat.Util.NETWORK_ID, ""));
+            activityIntent.putExtra(eaglechat.eaglechat.Util.NAME, prefs.getString(eaglechat.eaglechat.Util.NAME, ""));
             activity.startActivity(activityIntent);
         }
     }

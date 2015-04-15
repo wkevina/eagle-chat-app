@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbManager;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import com.hoho.android.usbserial.driver.UsbId;
@@ -14,7 +15,11 @@ public class DeviceConnectionReceiver extends BroadcastReceiver {
     private static final String TAG = "eaglechat.eaglechat";
 
     private static final String ACTION_USB_PERMISSION =
-            "eaglechat.eaglechat.USB_PERMISSION";
+            TAG + ".USB_PERMISSION";
+
+    public static final String DEVICE_ATTACHED = TAG + ".DEVICE_ATTACHED";
+    public static final String DEVICE_DETACHED = TAG + ".DEVICE_DETACHED";
+
     private Context mContext;
     public DeviceConnectionReceiver() {
     }
@@ -25,7 +30,7 @@ public class DeviceConnectionReceiver extends BroadcastReceiver {
         String action = intent.getAction();
         Log.d(TAG, action);
 
-        UsbDevice device = (UsbDevice) intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+        UsbDevice device = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
         Log.d(TAG, "Device: " + device);
 
         if (ACTION_USB_PERMISSION.equals(action)) {
@@ -64,14 +69,20 @@ public class DeviceConnectionReceiver extends BroadcastReceiver {
 
     private void notifyDeviceAttached(UsbDevice device) {
         Log.d(TAG, "Device attached: " + device);
-        Intent intent = new Intent(mContext, EagleChatCommService.class);
+        Intent intent = new Intent(mContext, PeregrineManagerService.class);
         intent.putExtra(UsbManager.EXTRA_DEVICE, device);
         mContext.startService(intent);
+
+        Intent attachedIntent = new Intent(DEVICE_ATTACHED);
+        LocalBroadcastManager.getInstance(mContext).sendBroadcast(attachedIntent);
     }
 
     private void notifyDeviceDetached() {
         Log.d(TAG, "Device detached.");
-        Intent intent = new Intent(mContext, EagleChatCommService.class);
+        Intent intent = new Intent(mContext, PeregrineManagerService.class);
         mContext.stopService(intent);
+
+        Intent detachedIntent = new Intent(DEVICE_DETACHED);
+        LocalBroadcastManager.getInstance(mContext).sendBroadcast(detachedIntent);
     }
 }

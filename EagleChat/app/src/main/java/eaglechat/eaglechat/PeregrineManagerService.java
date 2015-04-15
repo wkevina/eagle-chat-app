@@ -1,14 +1,17 @@
 package eaglechat.eaglechat;
 
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -17,17 +20,20 @@ import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.hoho.android.usbserial.driver.UsbSerialPort;
 import com.hoho.android.usbserial.util.SerialInputOutputManager;
 
-import org.jdeferred.DoneCallback;
-import org.jdeferred.FailCallback;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class EagleChatCommService extends Service {
+public class PeregrineManagerService extends Service {
     private static final String TAG = "eaglechat.eaglechat";
+
+    public static final String SERVICE_AVAILABLE = TAG + ".SERVICE_AVAILABLE";
+    public static final String SERVICE_DISCONNECTED = TAG + ".SERVICE_DISCONNECTED";
+
+    public static boolean isConnected = false;
+
     private final SerialInputOutputManager.Listener mListener =
             new SerialInputOutputManager.Listener() {
                 @Override
@@ -40,27 +46,48 @@ public class EagleChatCommService extends Service {
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            EagleChatCommService.this.updateReceivedData(data);
+                            PeregrineManagerService.this.updateReceivedData(data);
                         }
                     });
                 }
             };
-    private static final int STATE_DO_NOTHING = 0;
-    private static final int STATE_JUST_READ = 1;
-    private final IBinder mBinder = new EagleBinder();
+
+    private final IBinder mBinder = new PeregrineBinder();
     private final ExecutorService mExecutor = Executors.newSingleThreadExecutor();
     UsbDevice mUsbDevice;
     Handler handler;
     private UsbManager mUsbManager;
-    private List<String> buffer = new ArrayList<>();
     private SerialInputOutputManager mSerialIoManager;
     private UsbSerialPort mPort;
 
     private Peregrine mPeregrine;
 
-    public EagleChatCommService() {
+    BroadcastReceiver mDeviceStateReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+
+            String action = intent.getAction();
+
+            if (action.equals(DeviceConnectionReceiver.DEVICE_DETACHED)) {
+
+                Log.d(TAG, "Device detached. Stopping service.");
+
+
+                Intent disconnected = new Intent(SERVICE_DISCONNECTED);
+                LocalBroadcastManager.getInstance(PeregrineManagerService.this).sendBroadcast(disconnected);
+
+                stopIoManager();
+
+                stopSelf();
+            }
+        }
+    };
+
+
+    public PeregrineManagerService() {
 
     }
+
 
     /**
      * Called on new data from peripheral
@@ -75,29 +102,39 @@ public class EagleChatCommService extends Service {
 
     @Override
     public void onCreate() {
-        handler = new Handler();
-        super.onCreate();
 
-        //mPeregrine = new Peregrine();
+        super.onCreate();
+        handler = new Handler();
+
+        LocalBroadcastManager.getInstance(this).registerReceiver(mDeviceStateReceiver,
+                new IntentFilter(DeviceConnectionReceiver.DEVICE_DETACHED));
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d("eaglechat.eaglechat", "Received onStartCommand");
+
+        Log.d(TAG, "Received onStartCommand");
+
         if (intent != null) {
-            Log.d("eaglechat.eaglechat", intent.toString());
-            Toast.makeText(this, "service starting", Toast.LENGTH_SHORT).show();
+
+            Log.d(TAG, intent.toString());
+            Toast.makeText(this, getString(R.string.note_deviceConnected), Toast.LENGTH_SHORT).show();
 
             mUsbDevice = null;
             mUsbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
 
-            Intent usbIntent = intent;
-            mUsbDevice = usbIntent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
+            mUsbDevice = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE);
 
             UsbSerialDriver driver = new CdcAcmSerialDriver(mUsbDevice);
             onHasPort(driver);
 
+            LocalBroadcastManager manager = LocalBroadcastManager.getInstance(this);
+
+            manager.sendBroadcast(new Intent(SERVICE_AVAILABLE));
+
+            isConnected = true;
         }
+
         return super.onStartCommand(intent, flags, startId);
     }
 
@@ -146,37 +183,7 @@ public class EagleChatCommService extends Service {
 
         onDeviceStateChange();
 
-        mPeregrine.requestStatus().done(new DoneCallback<Integer>() {
-            @Override
-            public void onDone(Integer result) {
-                Log.d(TAG, "Status: " + result);
-            }
-        }).fail(new FailCallback<String>() {
-            @Override
-            public void onFail(String result) {
-                Log.d(TAG, "Failed with: " + result);
-            }
-        });
 
-        mPeregrine.commandSetId(15).done(new DoneCallback<String>() {
-            @Override
-            public void onDone(String result) {
-                Log.d(TAG, "Set id reply = " + result);
-
-            }
-        }).fail(new FailCallback<String>() {
-            @Override
-            public void onFail(String result) {
-                Log.d(TAG, "Failed with: " + result);
-            }
-        });
-
-        mPeregrine.requestId().done(new DoneCallback<Integer>() {
-            @Override
-            public void onDone(Integer result) {
-                Log.d(TAG, "Request id reply = " + result);
-            }
-        });
     }
 
     private void onDeviceStateChange() {
@@ -186,24 +193,22 @@ public class EagleChatCommService extends Service {
             mPort.setDTR(true);
         } catch (IOException ex) {
         }
-        /*
-        if (mPort != null) {
-            try {
-                mPort.write("\n".getBytes(), 200); // wake up board
-            } catch (IOException ex) {
-
-            }
-        }
-        */
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
+
+        isConnected = false;
+
+        Log.d(TAG, "Destroying EagleChatCommService");
         stopIoManager();
+
     }
 
     private void stopIoManager() {
+        isConnected = false;
+
         if (mSerialIoManager != null) {
             Log.i(TAG, "Stopping io manager ..");
             mSerialIoManager.stop();
@@ -222,12 +227,14 @@ public class EagleChatCommService extends Service {
             mExecutor.submit(mSerialIoManager);
             mPeregrine = new Peregrine(mSerialIoManager);
             //mPeregrine.setSerial(mSerialIoManager);
+
+            isConnected = true;
         }
     }
 
-    public class EagleBinder extends Binder {
-        EagleChatCommService getService() {
-            return EagleChatCommService.this;
+    public class PeregrineBinder extends Binder {
+        Peregrine getService() {
+            return mPeregrine;
         }
     }
 }

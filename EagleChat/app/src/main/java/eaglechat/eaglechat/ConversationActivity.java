@@ -139,7 +139,7 @@ public class ConversationActivity extends CompatListActivity implements
 
         switch (id) {
             case R.id.action_burn:
-                Config.burn(this);
+                Util.burn(this);
                 finish();
                 return true;
             case R.id.action_fake:

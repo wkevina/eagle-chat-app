@@ -75,7 +75,7 @@
         </receiver>
 
         <service
-            android:name=".EagleChatCommService"
+            android:name=".PeregrineManagerService"
             android:enabled="true"
             android:exported="false">
         </service>

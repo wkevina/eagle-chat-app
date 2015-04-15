@@ -20,29 +20,29 @@ import java.util.Queue;
 public class Peregrine {
 
     public static final String DELIM = ":";
-    //public static final String RECEIVE = "r"; // ^r:\d+:.*
-    public static final String RECEIVE_REGEX = "^r" + DELIM + "\\d+" + DELIM + ".+$"; // r:123:message
-    public static final String GET_KEY = "^g" + DELIM + "p" + DELIM + ".{32}$";
+
     public static final String END = "\n";
     public static final String OK = "OK";
     public static final String FAIL = "FAIL";
-    public static final String YES = "YES";
-    public static final String NO = "NO";
     public static final String SEND = "s"; // ^s:\d+:.*
     public static final String ID = "i"; //i:AA
-    public static final String SET_KEY = "p"; //p:123:[32 bytes]
+    public static final String KEY = "p"; //p:123:[32 bytes]
     public static final String GET = "g";
     public static final String TAG = "eaglechat.eaglechat";
 
     public static final int TIMEOUT_AFTER = 1000;
 
+    private static final String SET_PASSWORD = "h";
+    private static final String AUTHENTICATE = "a";
     private static final String REPLY = "x";
     private static final String FAIL_REPLY = REPLY + DELIM + FAIL;
     private static final String OK_REPLY = REPLY + DELIM + OK;
-    public static final String GET_STATUS_REPLY = "^" + REPLY + DELIM + "[0-9A-F]{2,}";
-    public static final String GET_ID_REPLY = GET_STATUS_REPLY; // Shares format with GET_STATUS_REPLY
+    private static final String GET_STATUS_REPLY = "^" + REPLY + DELIM + "[0-9A-F]{2,}";
+    private static final String GET_ID_REPLY = GET_STATUS_REPLY; // Shares format with GET_STATUS_REPLY
     private static final String SEND_COMMAND_REPLY = "^" + REPLY + DELIM + OK;
-
+    private static final String GET_PUBLIC_KEY_REPLY = "^" + REPLY + DELIM + "[0-9A-F]{64,}$";
+    private static final String GEN_KEYS = "k";
+    public static final String COMMIT = "c";
 
     // get status g:s:255   ^g:s:\d{1,3}
     // get public key g:p:[32 bytes]    ^g:p:.{32}
@@ -238,8 +238,8 @@ public class Peregrine {
         return sendMessagePromise;
     }
 
-    public byte[] formatSetIdCommand(int nodeId) {
-        return (ID + DELIM + Config.intToString(nodeId) + END).getBytes();
+    public byte[] formatSetIdCommand(String nodeId) {
+        return (ID + DELIM + nodeId + END).getBytes();
     }
 
     /**
@@ -247,15 +247,15 @@ public class Peregrine {
      * @param nodeId
      * @return
      */
-    public Promise<String,String,String> commandSetId(int nodeId) {
+    public Promise<String,String,String> commandSetId(String nodeId) {
 
-        if (nodeId > 254 || nodeId <= 0) {
+        if (nodeId.length() != 2) {
             throw new IllegalArgumentException("nodeId must be in range of 0-254");
         }
 
         Promise<String,String,String> setIdPromise;
 
-        byte[] setIdMessage = formatSetIdCommand(nodeId);
+        byte[] setIdMessage = formatSetIdCommand(nodeId.toUpperCase());
 
         setIdPromise = deferredWrite(setIdMessage, new MessageResolverFilter() {
             @Override
@@ -280,6 +280,11 @@ public class Peregrine {
 
         return setIdPromise;
 
+    }
+
+
+    private byte[] formatIdRequest() {
+        return (GET + DELIM + ID + END).getBytes();
     }
 
     public Promise<Integer,String,String> requestId() {
@@ -318,8 +323,153 @@ public class Peregrine {
         });
     }
 
-    private byte[] formatIdRequest() {
-        return (GET + DELIM + ID + END).getBytes();
+
+    private byte[] formatPublicKeyRequest() {
+        return (GET + DELIM + KEY + END).getBytes();
+    }
+
+
+    public Promise<String,String,String> requestPublicKey() {
+
+        Promise<String,String,String> requestPublicKeyPromise;
+
+        byte[] requestIdMessage = formatPublicKeyRequest();
+
+        requestPublicKeyPromise = deferredWrite(requestIdMessage, new MessageResolverFilter() {
+            @Override
+            public int filter(String msg) {
+                if (!msg.startsWith(REPLY)) {
+                    Log.d(TAG, "Reply doesn't match format.");
+                    return SKIP;
+                }
+                if (msg.contains(FAIL_REPLY)) {
+                    Log.d(TAG, "Reply was a fail message.");
+                    return REJECT;
+                } else if (msg.matches(GET_PUBLIC_KEY_REPLY)) {
+                    Log.d(TAG, "Reply valid, resolving public key.");
+                    return RESOLVE;
+                }
+
+                Log.d(TAG, "Skipping message.");
+
+                return SKIP;
+            }
+        });
+
+        return requestPublicKeyPromise.then(new DoneFilter<String, String>() {
+            @Override
+            public String filterDone(String result) {
+                return result.split(DELIM)[1];
+            }
+        });
+    }
+
+    private byte[] formatSetPasswordCommand(String hash) {
+        return (SET_PASSWORD + DELIM + hash + END).getBytes();
+    }
+
+    public Promise<String,String,String> commandSetPassword(String hash) {
+        if (hash.length() != EagleChatConfiguration.PASSWORD_HASH_LENGTH) {
+            throw new IllegalArgumentException("Password wrong length");
+        }
+
+        Promise<String,String,String> setPasswordPromise;
+
+        byte[] setPasswordMessage = formatSetPasswordCommand(hash);
+
+        setPasswordPromise = deferredWrite(setPasswordMessage, new MessageResolverFilter() {
+            @Override
+            public int filter(String msg) {
+                if (!msg.startsWith(REPLY)) {
+                    Log.d(TAG, "Reply doesn't match format.");
+                    return SKIP;
+                }
+                if (msg.contains(FAIL_REPLY)) {
+                    Log.d(TAG, "Reply was a fail message.");
+                    return REJECT;
+                } else if (msg.matches(OK_REPLY)) {
+                    Log.d(TAG, "Reply valid, resolving public key.");
+                    return RESOLVE;
+                }
+
+                Log.d(TAG, "Skipping message.");
+
+                return SKIP;
+            }
+        });
+
+        return setPasswordPromise;
+
+    }
+
+    private byte[] formatGenerateKeysCommand() {
+
+        return (GEN_KEYS + END).getBytes();
+    }
+
+    public Promise<String,String,String> commandGenerateKeys() {
+
+        Promise<String,String,String> generateKeysPromise;
+
+        byte[] generateKeysMessage = formatGenerateKeysCommand();
+
+        generateKeysPromise = deferredWrite(generateKeysMessage, new MessageResolverFilter() {
+            @Override
+            public int filter(String msg) {
+                if (!msg.startsWith(REPLY)) {
+                    Log.d(TAG, "Reply doesn't match format.");
+                    return SKIP;
+                }
+                if (msg.contains(FAIL_REPLY)) {
+                    Log.d(TAG, "Reply was a fail message.");
+                    return REJECT;
+                } else if (msg.matches(OK_REPLY)) {
+                    Log.d(TAG, "Reply valid, resolving generate command.");
+                    return RESOLVE;
+                }
+
+                Log.d(TAG, "Skipping message.");
+
+                return SKIP;
+            }
+        });
+
+        return generateKeysPromise;
+    }
+
+
+    private byte[] formatCommitCommand() {
+        return (COMMIT + END).getBytes();
+    }
+
+    public Promise<String,String,String> commandCommit() {
+
+        Promise<String,String,String> commitPromise;
+
+        byte[] commandCommitMessage = formatCommitCommand();
+
+        commitPromise = deferredWrite(commandCommitMessage, new MessageResolverFilter() {
+            @Override
+            public int filter(String msg) {
+                if (!msg.startsWith(REPLY)) {
+                    Log.d(TAG, "Reply doesn't match format.");
+                    return SKIP;
+                }
+                if (msg.contains(FAIL_REPLY)) {
+                    Log.d(TAG, "Reply was a fail message.");
+                    return REJECT;
+                } else if (msg.matches(OK_REPLY)) {
+                    Log.d(TAG, "Reply valid, resolving generate command.");
+                    return RESOLVE;
+                }
+
+                Log.d(TAG, "Skipping message.");
+
+                return SKIP;
+            }
+        });
+
+        return commitPromise;
     }
 
     private Promise<String,String,String> deferredWrite(byte[] toPeripheral, MessageResolverFilter filter) {
@@ -362,7 +512,7 @@ public class Peregrine {
         if (key.length != 32) {
             throw new IllegalArgumentException("key must be 32 bytes long");
         }
-        return (SET_KEY + DELIM + String.valueOf(dest) + DELIM + new String(key) + END).getBytes();
+        return (KEY + DELIM + String.valueOf(dest) + DELIM + new String(key) + END).getBytes();
     }
 
     private interface MessageResolverFilter {

@@ -29,4 +29,9 @@
     <string name="hint_contactName">First Last</string>
     <string name="hint_networkId">01ab</string>
     <string name="title_activity_usb_test">UsbTestActivity</string>
+    <string name="note_deviceConnected">EagleChat device connected</string>
+    <string name="note_waitingForDevice">Please connect EagleChat device</string>
+    <string name="status_checkingConfiguration">Checking configuration</string>
+    <string name="label_passwordDescription">Password:</string>
+    <string name="label_nodeIdDescription">Enter a number in hexadecimal format as your node ID.</string>
 </resources>
