@@ -25,6 +25,7 @@ public class EagleChatConfiguration {
     public static final int PASSWORD = 8;
 
     public static final int PASSWORD_HASH_LENGTH = 60;
+    private static final int PASSWORD_LENGTH_MIN = 4;
 
     private int mStatus;
 
@@ -101,5 +102,9 @@ public class EagleChatConfiguration {
         } catch (NoSuchAlgorithmException ex) {
             return "";
         }
+    }
+
+    public static boolean validatePassword(String pwd) {
+        return (pwd.length() >= PASSWORD_LENGTH_MIN);
     }
 }

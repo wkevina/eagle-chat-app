@@ -31,7 +31,7 @@ public class Peregrine {
     public static final String TAG = "eaglechat.eaglechat";
 
     public static final int TIMEOUT_AFTER = 1000;
-
+    public static final String COMMIT = "c";
     private static final String SET_PASSWORD = "h";
     private static final String AUTHENTICATE = "a";
     private static final String REPLY = "x";
@@ -42,8 +42,6 @@ public class Peregrine {
     private static final String SEND_COMMAND_REPLY = "^" + REPLY + DELIM + OK;
     private static final String GET_PUBLIC_KEY_REPLY = "^" + REPLY + DELIM + "[0-9A-F]{64,}$";
     private static final String GEN_KEYS = "k";
-    public static final String COMMIT = "c";
-
     // get status g:s:255   ^g:s:\d{1,3}
     // get public key g:p:[32 bytes]    ^g:p:.{32}
     protected final Queue<String> mInputQueue;
@@ -115,8 +113,7 @@ public class Peregrine {
                     if (headResolver.isDone()) {
                         Log.d(TAG, "Removing head resolver.");
                         mResolverQueue.remove();
-                    }
-                    else
+                    } else
                         break;
                 }
 
@@ -148,7 +145,7 @@ public class Peregrine {
 
         byte[] statusRequestBytes = formatStatusRequest();
 
-        Promise<String,String,String> statusPromise;
+        Promise<String, String, String> statusPromise;
 
         statusPromise = deferredWrite(statusRequestBytes, new MessageResolverFilter() {
             @Override
@@ -192,7 +189,6 @@ public class Peregrine {
     }
 
 
-
     public byte[] formatSendCommand(int dest, String message) {
         return (SEND + DELIM + String.valueOf(dest) + DELIM + message + END).getBytes();
     }
@@ -212,7 +208,7 @@ public class Peregrine {
 
         byte[] sendMessageBytes = formatSendCommand(dest, message);
 
-        Promise<String,String,String> sendMessagePromise;
+        Promise<String, String, String> sendMessagePromise;
 
         sendMessagePromise = deferredWrite(sendMessageBytes, new MessageResolverFilter() {
             @Override
@@ -225,7 +221,7 @@ public class Peregrine {
                     Log.d(TAG, "Reply was a fail message.");
                     return REJECT;
                 } else if (msg.matches(SEND_COMMAND_REPLY)) {
-                    Log.d(TAG, "Reply valid, resolving promise.");
+                    Log.d(TAG, "Reply valid, message sent.");
                     return RESOLVE;
                 }
 
@@ -244,16 +240,17 @@ public class Peregrine {
 
     /**
      * Sets the node id of the peripheral
+     *
      * @param nodeId
      * @return
      */
-    public Promise<String,String,String> commandSetId(String nodeId) {
+    public Promise<String, String, String> commandSetId(String nodeId) {
 
         if (nodeId.length() != 2) {
             throw new IllegalArgumentException("nodeId must be in range of 0-254");
         }
 
-        Promise<String,String,String> setIdPromise;
+        Promise<String, String, String> setIdPromise;
 
         byte[] setIdMessage = formatSetIdCommand(nodeId.toUpperCase());
 
@@ -268,7 +265,7 @@ public class Peregrine {
                     Log.d(TAG, "Reply was a fail message.");
                     return REJECT;
                 } else if (msg.matches(OK_REPLY)) {
-                    Log.d(TAG, "Reply valid, resolving promise.");
+                    Log.d(TAG, "Reply valid, nodeId set.");
                     return RESOLVE;
                 }
 
@@ -287,9 +284,9 @@ public class Peregrine {
         return (GET + DELIM + ID + END).getBytes();
     }
 
-    public Promise<Integer,String,String> requestId() {
+    public Promise<Integer, String, String> requestId() {
 
-        Promise<String,String,String> requestIdPromise;
+        Promise<String, String, String> requestIdPromise;
 
         byte[] requestIdMessage = formatIdRequest();
 
@@ -304,7 +301,7 @@ public class Peregrine {
                     Log.d(TAG, "Reply was a fail message.");
                     return REJECT;
                 } else if (msg.matches(GET_ID_REPLY)) {
-                    Log.d(TAG, "Reply valid, resolving promise.");
+                    Log.d(TAG, "Reply valid, got node id.");
                     return RESOLVE;
                 }
 
@@ -329,9 +326,9 @@ public class Peregrine {
     }
 
 
-    public Promise<String,String,String> requestPublicKey() {
+    public Promise<String, String, String> requestPublicKey() {
 
-        Promise<String,String,String> requestPublicKeyPromise;
+        Promise<String, String, String> requestPublicKeyPromise;
 
         byte[] requestIdMessage = formatPublicKeyRequest();
 
@@ -368,12 +365,12 @@ public class Peregrine {
         return (SET_PASSWORD + DELIM + hash + END).getBytes();
     }
 
-    public Promise<String,String,String> commandSetPassword(String hash) {
+    public Promise<String, String, String> commandSetPassword(String hash) {
         if (hash.length() != EagleChatConfiguration.PASSWORD_HASH_LENGTH) {
             throw new IllegalArgumentException("Password wrong length");
         }
 
-        Promise<String,String,String> setPasswordPromise;
+        Promise<String, String, String> setPasswordPromise;
 
         byte[] setPasswordMessage = formatSetPasswordCommand(hash);
 
@@ -388,7 +385,7 @@ public class Peregrine {
                     Log.d(TAG, "Reply was a fail message.");
                     return REJECT;
                 } else if (msg.matches(OK_REPLY)) {
-                    Log.d(TAG, "Reply valid, resolving public key.");
+                    Log.d(TAG, "Reply valid, password set.");
                     return RESOLVE;
                 }
 
@@ -402,14 +399,55 @@ public class Peregrine {
 
     }
 
+
+    private byte[] formatAuthenticateCommand(String hash) {
+        return (AUTHENTICATE + DELIM + hash + END).getBytes();
+    }
+
+    public Promise<String, String, String> commandAuthenticate(String hash) {
+
+        if (hash.length() != EagleChatConfiguration.PASSWORD_HASH_LENGTH) {
+            throw new IllegalArgumentException("Password wrong length");
+        }
+
+        Promise<String, String, String> authPromise;
+
+        byte[] authMessage = formatAuthenticateCommand(hash);
+
+        authPromise = deferredWrite(authMessage, new MessageResolverFilter() {
+            @Override
+            public int filter(String msg) {
+                if (!msg.startsWith(REPLY)) {
+                    Log.d(TAG, "Reply doesn't match format.");
+                    return SKIP;
+                }
+                if (msg.contains(FAIL_REPLY)) {
+                    Log.d(TAG, "Reply was a fail message.");
+                    return REJECT;
+                } else if (msg.matches(OK_REPLY)) {
+                    Log.d(TAG, "Reply valid, authenticated.");
+                    return RESOLVE;
+                }
+
+                Log.d(TAG, "Skipping message.");
+
+                return SKIP;
+            }
+        });
+
+        return authPromise;
+
+    }
+
+
     private byte[] formatGenerateKeysCommand() {
 
         return (GEN_KEYS + END).getBytes();
     }
 
-    public Promise<String,String,String> commandGenerateKeys() {
+    public Promise<String, String, String> commandGenerateKeys() {
 
-        Promise<String,String,String> generateKeysPromise;
+        Promise<String, String, String> generateKeysPromise;
 
         byte[] generateKeysMessage = formatGenerateKeysCommand();
 
@@ -442,9 +480,9 @@ public class Peregrine {
         return (COMMIT + END).getBytes();
     }
 
-    public Promise<String,String,String> commandCommit() {
+    public Promise<String, String, String> commandCommit() {
 
-        Promise<String,String,String> commitPromise;
+        Promise<String, String, String> commitPromise;
 
         byte[] commandCommitMessage = formatCommitCommand();
 
@@ -472,7 +510,7 @@ public class Peregrine {
         return commitPromise;
     }
 
-    private Promise<String,String,String> deferredWrite(byte[] toPeripheral, MessageResolverFilter filter) {
+    private Promise<String, String, String> deferredWrite(byte[] toPeripheral, MessageResolverFilter filter) {
 
         final MessageResolver writeResolver = new MessageResolver(filter, TIMEOUT_AFTER);
         final byte[] messageBytes = toPeripheral;

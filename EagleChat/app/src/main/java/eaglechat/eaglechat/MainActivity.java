@@ -7,6 +7,9 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -38,6 +41,7 @@ public class MainActivity extends PeregrineActivity {
     private TextView mStatusTextView;
     private String mPublicKey;
     private int mNodeId;
+    private EditText mPasswordText;
 
     /**
      * Fetches configuration status from EagleChat board
@@ -86,7 +90,10 @@ public class MainActivity extends PeregrineActivity {
     }
 
     private void showAuthenticationScreen() {
+
         // Remove spinner and show password box
+        findViewById(R.id.loadingScreen).setVisibility(View.GONE);
+        findViewById(R.id.passwordScreen).setVisibility(View.VISIBLE);
 
     }
 
@@ -145,6 +152,14 @@ public class MainActivity extends PeregrineActivity {
 
         mStatusTextView = (TextView) findViewById(R.id.statusText);
 
+        mPasswordText = (EditText) findViewById(R.id.text_password);
+
+        findViewById(R.id.passwordScreen).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                submitPassword(v);
+            }
+        });
 
         //mState = determineState();
 
@@ -173,6 +188,46 @@ public class MainActivity extends PeregrineActivity {
 
         }
         */
+    }
+
+    private void submitPassword(View v) {
+
+        clearKeyboard(v);
+
+        String pwd = mPasswordText.getText().toString();
+        if (EagleChatConfiguration.validatePassword(pwd)) {
+            String hash = EagleChatConfiguration.getPasswordHash(pwd);
+            if (peregrineAvailable()) {
+                getPeregrine().commandAuthenticate(hash).done(new DoneCallback<String>() {
+                    @Override
+                    public void onDone(String result) {
+                        // We have authenticated
+                        Log.d(TAG, "Authentication successful.");
+                        Toast.makeText(MainActivity.this, "Authenticated", Toast.LENGTH_SHORT).show();
+                        mHandler.postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                handleLaunchContactsActivity();
+                            }
+                        }, 750);
+                    }
+                }).fail(new FailCallback<String>() {
+                    @Override
+                    public void onFail(String result) {
+                        Log.d(TAG, "Couldn't log in.");
+                        Toast.makeText(MainActivity.this, "Log in failed", Toast.LENGTH_SHORT).show();
+                        mPasswordText.setText("");
+                    }
+                });
+            }
+        }
+    }
+
+    private void clearKeyboard(View v) {
+        InputMethodManager imm = (InputMethodManager) v.getContext()
+                .getSystemService(Context.INPUT_METHOD_SERVICE);
+
+        imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
     }
 
 
