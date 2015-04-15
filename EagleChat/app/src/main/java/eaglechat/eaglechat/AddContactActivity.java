@@ -3,6 +3,7 @@ package eaglechat.eaglechat;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -24,7 +25,7 @@ import org.spongycastle.util.encoders.Base64;
 
 
 public class AddContactActivity extends ActionBarActivity {
-
+    public static final String TAG = "eaglechat.eaglechat";
     EditText mNameText, mNetworkIdText, mPublicKeyText;
     Button mScanButton;
     FloatingActionButton mSubmitButton;
@@ -84,14 +85,20 @@ public class AddContactActivity extends ActionBarActivity {
     }
 
     private void onInputUpdated() {
+
         String pubHex = mPublicKeyText.getText().toString();
         String idHex = mNetworkIdText.getText().toString();
+
         boolean isFilledOut = EagleChatConfiguration.validatePublicKey(pubHex) &&
                 EagleChatConfiguration.validateNodeId(idHex);
+
         if (isFilledOut) {
-            byte[] pubKeyBytes = Util.hexStringToBytes(Util.stripSeparators(pubHex));
-            mPublicKey = Base64.toBase64String(pubKeyBytes); // Decode and recode public key
+
+            mPublicKey = Util.stripSeparators(pubHex);
+
+            byte[] pubKeyBytes = Util.hexStringToBytes(mPublicKey);
             byte[] idBytes = Util.hexStringToBytes(Util.padHex(idHex, 4));
+
             mScanButton.setText("Fingerprint: " + Util.fingerprint(pubKeyBytes, idBytes));
         }
     }
@@ -102,26 +109,36 @@ public class AddContactActivity extends ActionBarActivity {
     }
 
     public void onActivityResult(int requestCode, int resultCode, Intent intent) {
+
         IntentResult scanResult = IntentIntegrator.parseActivityResult(requestCode, resultCode, intent);
+
         if (intent != null && scanResult != null) {
+
             Log.d(getPackageName(), scanResult.toString());
-            boolean isQRCode = scanResult.getFormatName().equalsIgnoreCase("QR_CODE");
+
             String contents = scanResult.getContents();
+
             if (contents != null) {
+
                 decodeQRCode(contents);
+
             } else {
+
                 Toast.makeText(this, "Could not read code", Toast.LENGTH_LONG).show();
-                return;
+
             }
         }
-        // else continue with any other code you need in the method
 
     }
 
     private void decodeQRCode(String contents) {
+
         String[] chunks = contents.split(":");
+
         boolean isEagleChat = chunks[0].equalsIgnoreCase("eaglechat"); // Chunk #1 must be 'eaglechat'
+
         if (!isEagleChat || !(chunks.length == 3 || chunks.length == 4)) {
+
             Toast.makeText(this, "Not an EagleChat code", Toast.LENGTH_LONG).show();
             return;
         }
@@ -130,11 +147,13 @@ public class AddContactActivity extends ActionBarActivity {
         byte[] publicKeyBytes = Base64.decode(chunks[2]); // Decode the public key from chunk #3
 
         if (!EagleChatConfiguration.validateNodeId(networkId)) {
+
             Toast.makeText(this, "Invalid network ID", Toast.LENGTH_LONG).show();
             return;
         }
 
         if (publicKeyBytes.length != 32) {
+
             Toast.makeText(this, "Invalid public key", Toast.LENGTH_LONG).show();
             return;
         }
@@ -142,7 +161,8 @@ public class AddContactActivity extends ActionBarActivity {
         if (chunks.length == 4 && mNameText.getText().length() == 0) {
             mNameText.setText(chunks[3]);
         }
-        mPublicKey = Base64.toBase64String(publicKeyBytes);
+
+        mPublicKey = Util.bytesToString(publicKeyBytes, "");
         mPublicKeyText.setText(Util.bytesToString(publicKeyBytes, " "));
         mNetworkIdText.setText(networkId);
         mScanButton.setText("Fingerprint: " + Util.fingerprint(publicKeyBytes, Util.hexStringToBytes(networkId)));
@@ -158,30 +178,39 @@ public class AddContactActivity extends ActionBarActivity {
             mNameText.setError("Enter a name");
             doesValidate = false;
         }
+
         if (networkId.isEmpty()) {
             mNetworkIdText.setError("Enter network ID");
             doesValidate = false;
-        } else if (!EagleChatConfiguration.validateNodeId(networkId)) {
+        }
+
+        else if (!EagleChatConfiguration.validateNodeId(networkId)) {
             mNetworkIdText.setError("Contains invalid characters. Must be hex-format number.");
             doesValidate = false;
         }
-        if (mPublicKey == null || mPublicKey.isEmpty()) {
+
+        if (!EagleChatConfiguration.validatePublicKey(mPublicKey)) {
             Toast.makeText(this, "Invalid public key", Toast.LENGTH_LONG).show();
             doesValidate = false;
         }
+
         if (!doesValidate) {
             Log.d(this.getLocalClassName(), "Some fields are missing. Cannot continue.");
-        } else {
+        }
+
+        else {
             addContact(networkId, contactName, mPublicKey);
         }
     }
 
     private void addContact(String networkId, String contactName, String publicKey) {
         ContentValues values = new ContentValues();
+
         values.put(ContactsTable.COLUMN_NETWORK_ID, networkId);
         values.put(ContactsTable.COLUMN_NAME, contactName);
-        values.put(ContactsTable.COLUMN_PUBLIC_KEY, mPublicKey);
+        values.put(ContactsTable.COLUMN_PUBLIC_KEY, publicKey);
         getContentResolver().insert(DatabaseProvider.CONTACTS_URI, values);
+
         finish();
     }
 
@@ -191,7 +220,7 @@ public class AddContactActivity extends ActionBarActivity {
     }
 
     @Override
-    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+    protected void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
         onInputUpdated();
     }
@@ -216,7 +245,7 @@ public class AddContactActivity extends ActionBarActivity {
                 finish();
                 return true;
             case R.id.action_my_details:
-                MyDetailsActivity.Util.launchMyDetailsActivity(this);
+                MyDetailsActivity.launchMyDetailsActivity(this);
                 return true;
         }
 

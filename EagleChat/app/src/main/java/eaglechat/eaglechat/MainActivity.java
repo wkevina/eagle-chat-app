@@ -127,17 +127,23 @@ public class MainActivity extends PeregrineActivity {
         SharedPreferences prefs = getSharedPreferences(getString(R.string.shared_prefs_file), Context.MODE_PRIVATE);
 
         String ourPublicKey = prefs.getString(Util.PUBLIC_KEY, "");
-        int ourNodeId = prefs.getInt(Util.PUBLIC_KEY, 255);
+        int ourNodeId = prefs.getInt(Util.NODE_ID, 255);
 
-        if (ourPublicKey.contentEquals(mPublicKey) && ourNodeId == mNodeId) {
-            // we totally know this board
-            // do the right thing here
-            // probably try to authenticate
+
+        if ( (ourNodeId == 255 || ourPublicKey.isEmpty())
+                || !(ourPublicKey.contentEquals(mPublicKey) && ourNodeId == mNodeId) ) {
+            // We have never had a board connected before or this is a new board
+            // Don't delete anything, just update info
+            prefs.edit()
+                    .putString(Util.PUBLIC_KEY, mPublicKey)
+                    .putInt(Util.NODE_ID, mNodeId)
+                .apply();
 
         }
+        handleLaunchContactsActivity();
         /*
         return prefs.contains(Util.PUBLIC_KEY)
-                && prefs.contains(Util.NETWORK_ID)
+                && prefs.contains(Util.NODE_ID)
                 && prefs.contains(Util.NAME);
                 */
     }
@@ -204,12 +210,7 @@ public class MainActivity extends PeregrineActivity {
                         // We have authenticated
                         Log.d(TAG, "Authentication successful.");
                         Toast.makeText(MainActivity.this, "Authenticated", Toast.LENGTH_SHORT).show();
-                        mHandler.postDelayed(new Runnable() {
-                            @Override
-                            public void run() {
-                                handleLaunchContactsActivity();
-                            }
-                        }, 750);
+                        getIdentifiers();
                     }
                 }).fail(new FailCallback<String>() {
                     @Override
@@ -276,7 +277,7 @@ public class MainActivity extends PeregrineActivity {
         SharedPreferences prefs = getSharedPreferences(getString(R.string.shared_prefs_file), MODE_PRIVATE);
         Intent activityIntent = new Intent(this, MyDetailsActivity.class);
         activityIntent.putExtra(Util.PUBLIC_KEY, Base64.decode(prefs.getString(Util.PUBLIC_KEY, "")));
-        activityIntent.putExtra(Util.NETWORK_ID, Base64.decode(prefs.getString(Util.NETWORK_ID, "")));
+        activityIntent.putExtra(Util.NODE_ID, Base64.decode(prefs.getString(Util.NODE_ID, "")));
 
         startActivity(activityIntent);
         finish();

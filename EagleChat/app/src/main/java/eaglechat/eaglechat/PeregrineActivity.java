@@ -93,10 +93,22 @@ abstract public class PeregrineActivity extends ActionBarActivity {
             if (action.contentEquals(PeregrineManagerService.SERVICE_DISCONNECTED)) {
 
                 Log.d(TAG, "Service unavailable. Attempting to stop service.");
-
+                mPeregrine = null;
                 if (mBound) {
-                    unbindService(mConnection);
+                    try {
+                        unbindService(mConnection);
+                    } catch (IllegalArgumentException ex) {
+                        // I don't know. That's dumb.
+                    }
                 }
+                mBound = false;
+                mHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        onPeregrineUnavailable();
+                    }
+                });
+
             }
         }
     };

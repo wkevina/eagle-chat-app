@@ -20,7 +20,7 @@ public class Util {
 
     public static final String PUBLIC_KEY = BASE + "public_key";
 
-    public static final String NETWORK_ID = BASE + "network_id";
+    public static final String NODE_ID = BASE + "network_id";
 
     public static final String NAME = BASE + "name";
 
@@ -106,7 +106,7 @@ public class Util {
     public static boolean isSetup(Context ctx) {
         SharedPreferences prefs = ctx.getSharedPreferences(ctx.getString(R.string.shared_prefs_file), Context.MODE_PRIVATE);
         return prefs.contains(Util.PUBLIC_KEY)
-                && prefs.contains(Util.NETWORK_ID)
+                && prefs.contains(Util.NODE_ID)
                 && prefs.contains(Util.NAME);
 
     }

@@ -12,6 +12,7 @@ import android.widget.Toast;
 
 import com.melnykov.fab.FloatingActionButton;
 
+import org.jdeferred.AlwaysCallback;
 import org.jdeferred.DoneCallback;
 import org.jdeferred.DonePipe;
 import org.jdeferred.Promise;
@@ -26,6 +27,7 @@ public class RegisterActivity extends PeregrineActivity {
     TextView mKeyLabel;
     FloatingActionButton mDoneButton;
     String mPublicKey;
+    String mName;
     private EditText mPasswordText;
 
     @Override
@@ -55,7 +57,7 @@ public class RegisterActivity extends PeregrineActivity {
 
     @Override
     void onPeregrineUnavailable() {
-
+        Util.restart(this);
     }
 
     private void submit() {
@@ -85,52 +87,13 @@ public class RegisterActivity extends PeregrineActivity {
 
         if (isReady) {
 
+            mDoneButton.setEnabled(false);
+
+            mName = name;
+
             final String nodeId = networkIdString;
 
-            if (peregrineAvailable()) {
-
-                getPeregrine().commandSetPassword(passwordHash)
-
-                        .then(new DoneCallback<String>() {
-                            @Override
-                            public void onDone(String result) {
-                                Log.d(TAG, "Password set.");
-                            }
-                        })
-                        .then(new DonePipe<String, String, String, String>() {
-                            @Override
-                            public Promise<String, String, String> pipeDone(String result) {
-                                return mPeregrine.commandSetId(nodeId);
-                            }
-                        })
-                        .then(new DonePipe<String, String, String, String>() {
-                            @Override
-                            public Promise<String, String, String> pipeDone(String result) {
-                                return mPeregrine.commandGenerateKeys();
-                            }
-                        })
-                        .then(new DonePipe<String, String, String, String>() {
-                            @Override
-                            public Promise<String, String, String> pipeDone(String result) {
-                                return mPeregrine.commandCommit();
-                            }
-                        })
-                        .then(new DonePipe<String, Integer, String, String>() {
-                            @Override
-                            public Promise<Integer, String, String> pipeDone(String result) {
-                                return mPeregrine.requestStatus();
-                            }
-                        })
-                        .done(new DoneCallback<Integer>() {
-                            @Override
-                            public void onDone(Integer result) {
-                                Log.d(TAG, "Status: " + result);
-                                Toast.makeText(RegisterActivity.this, "Successfully registered", Toast.LENGTH_SHORT).show();
-                            }
-                        });
-            } else {
-                Toast.makeText(this, "EagleChat device unavailable", Toast.LENGTH_SHORT).show();
-            }
+            commitConfiguration(nodeId, passwordHash);
 
             //writeData(name, networkIdString, mPublicKey);
             //Util.restart(this);
@@ -139,14 +102,74 @@ public class RegisterActivity extends PeregrineActivity {
 
     }
 
-    private void writeData(String name, String id, String key) {
+    private void commitConfiguration(final String nodeId, final String passwordHash) {
+        if (peregrineAvailable()) {
+
+            getPeregrine().commandSetPassword(passwordHash)
+
+                    .then(new DoneCallback<String>() {
+                        @Override
+                        public void onDone(String result) {
+                            Log.d(TAG, "Password set.");
+                        }
+                    })
+                    .then(new DonePipe<String, String, String, String>() {
+                        @Override
+                        public Promise<String, String, String> pipeDone(String result) {
+                            return mPeregrine.commandSetId(nodeId);
+                        }
+                    })
+                    .then(new DonePipe<String, String, String, String>() {
+                        @Override
+                        public Promise<String, String, String> pipeDone(String result) {
+                            return mPeregrine.commandGenerateKeys();
+                        }
+                    })
+                    .then(new DonePipe<String, String, String, String>() {
+                        @Override
+                        public Promise<String, String, String> pipeDone(String result) {
+                            return mPeregrine.commandCommit();
+                        }
+                    })
+                    .then(new DonePipe<String, Integer, String, String>() {
+                        @Override
+                        public Promise<Integer, String, String> pipeDone(String result) {
+                            return mPeregrine.requestStatus();
+                        }
+                    })
+                    .done(new DoneCallback<Integer>() {
+                        @Override
+                        public void onDone(Integer result) {
+                            Log.d(TAG, "Status: " + result);
+                            Toast.makeText(RegisterActivity.this, "Successfully registered", Toast.LENGTH_SHORT).show();
+                            finishRegistration();
+                        }
+                    })
+                    .always(new AlwaysCallback<Integer, String>() {
+                        @Override
+                        public void onAlways(Promise.State state, Integer resolved, String rejected) {
+                            mDoneButton.setEnabled(true);
+                        }
+                    });
+        } else {
+            Toast.makeText(this, "EagleChat device unavailable", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void finishRegistration() {
+
         SharedPreferences.Editor editor = getSharedPreferences(getString(R.string.shared_prefs_file), MODE_PRIVATE).edit();
 
-        editor
-                .putString(Util.NAME, name)
-                .putString(Util.NETWORK_ID, id)
-                .commit();
+        editor.putString(Util.NAME, mName).apply();
+
+        mHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                Util.restart(RegisterActivity.this);
+            }
+        }, 750);
     }
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {

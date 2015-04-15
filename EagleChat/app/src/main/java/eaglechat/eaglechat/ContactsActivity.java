@@ -76,7 +76,7 @@ public class ContactsActivity extends CompatListActivity implements LoaderManage
                 finish();
                 return true;
             case R.id.action_my_details:
-                MyDetailsActivity.Util.launchMyDetailsActivity(this);
+                MyDetailsActivity.launchMyDetailsActivity(this);
                 return true;
         }
 

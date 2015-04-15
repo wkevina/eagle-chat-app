@@ -32,6 +32,7 @@ import java.util.Map;
 public class MyDetailsActivity extends ActionBarActivity {
 
     private static final int MARGIN = 0;
+    private static final String TAG = "eaglechat.eaglechat";
     private int CODE_SIZE = 200;
     byte[] mPublicKey = new byte[32];
 
@@ -41,6 +42,21 @@ public class MyDetailsActivity extends ActionBarActivity {
 
     ImageView mQRCodeView;
     TextView mFingerPrintText, mKeyText, mNetworkIdText;
+
+    /**
+     * Utility method for launching the MyDetails activity
+     *
+     * @param activity Context to use for launching MyDetails
+     */
+    public static void launchMyDetailsActivity(Context activity) {
+        String filename = activity.getString(R.string.shared_prefs_file);
+        SharedPreferences prefs = activity.getSharedPreferences(filename, MODE_PRIVATE);
+        Intent activityIntent = new Intent(activity, MyDetailsActivity.class);
+        activityIntent.putExtra(eaglechat.eaglechat.Util.PUBLIC_KEY, prefs.getString(eaglechat.eaglechat.Util.PUBLIC_KEY, ""));
+        activityIntent.putExtra(eaglechat.eaglechat.Util.NODE_ID, prefs.getInt(eaglechat.eaglechat.Util.NODE_ID, 255));
+        activityIntent.putExtra(eaglechat.eaglechat.Util.NAME, prefs.getString(eaglechat.eaglechat.Util.NAME, ""));
+        activity.startActivity(activityIntent);
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,9 +92,18 @@ public class MyDetailsActivity extends ActionBarActivity {
         Bundle args = getIntent().getExtras();
         if (args == null) {
             finish(); // bail!
+            return;
         }
-        mPublicKey = args.getByteArray(eaglechat.eaglechat.Util.PUBLIC_KEY);
-        mNetworkId = args.getString(eaglechat.eaglechat.Util.NETWORK_ID);
+
+        String key = args.getString(eaglechat.eaglechat.Util.PUBLIC_KEY);
+        if (key == null || !EagleChatConfiguration.validatePublicKey(key)) {
+            Log.d(TAG, "MyDetailsActivity: no public key or invalid key");
+            finish();
+            return;
+        }
+
+        mPublicKey =  Util.hexStringToBytes(key);
+        mNetworkId = Util.intToString(args.getInt(eaglechat.eaglechat.Util.NODE_ID));
         mName = args.getString(eaglechat.eaglechat.Util.NAME);
     }
 
@@ -134,21 +159,4 @@ public class MyDetailsActivity extends ActionBarActivity {
         mQRCodeView.setImageBitmap(qrCode);
     }
 
-
-    public static class Util {
-        /**
-         * Utility method for launching the MyDetails activity
-         *
-         * @param activity Context to use for launching MyDetails
-         */
-        public static void launchMyDetailsActivity(Context activity) {
-            String filename = activity.getString(R.string.shared_prefs_file);
-            SharedPreferences prefs = activity.getSharedPreferences(filename, MODE_PRIVATE);
-            Intent activityIntent = new Intent(activity, MyDetailsActivity.class);
-            activityIntent.putExtra(eaglechat.eaglechat.Util.PUBLIC_KEY, Base64.decode(prefs.getString(eaglechat.eaglechat.Util.PUBLIC_KEY, "")));
-            activityIntent.putExtra(eaglechat.eaglechat.Util.NETWORK_ID, prefs.getString(eaglechat.eaglechat.Util.NETWORK_ID, ""));
-            activityIntent.putExtra(eaglechat.eaglechat.Util.NAME, prefs.getString(eaglechat.eaglechat.Util.NAME, ""));
-            activity.startActivity(activityIntent);
-        }
-    }
 }
