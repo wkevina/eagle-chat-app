@@ -170,7 +170,7 @@ public class AddContactActivity extends ActionBarActivity {
 
     private void submit() {
         String contactName = mNameText.getText().toString();
-        String networkId = Util.padHex(mNetworkIdText.getText().toString(), 2);
+        String networkId = mNetworkIdText.getText().toString();
 
         boolean doesValidate = true;
 
@@ -189,8 +189,8 @@ public class AddContactActivity extends ActionBarActivity {
             doesValidate = false;
         }
 
-        if (!EagleChatConfiguration.validatePublicKey(mPublicKey)) {
-            Toast.makeText(this, "Invalid public key", Toast.LENGTH_LONG).show();
+        if (mPublicKey == null || !EagleChatConfiguration.validatePublicKey(mPublicKey)) {
+            mPublicKeyText.setError("Invalid public key");
             doesValidate = false;
         }
 
@@ -199,6 +199,7 @@ public class AddContactActivity extends ActionBarActivity {
         }
 
         else {
+            networkId = Util.padHex(networkId, 2);
             addContact(networkId, contactName, mPublicKey);
         }
     }

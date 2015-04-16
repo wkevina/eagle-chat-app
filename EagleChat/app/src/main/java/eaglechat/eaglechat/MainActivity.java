@@ -265,7 +265,7 @@ public class MainActivity extends PeregrineActivity {
 
     @Override
     void onPeregrineUnavailable() {
-
+        Util.restart(this);
     }
 
     private void handleLaunchUsbActivity() {

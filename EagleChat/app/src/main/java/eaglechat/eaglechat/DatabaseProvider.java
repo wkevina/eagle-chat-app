@@ -8,6 +8,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
+import android.text.TextUtils;
 import android.util.Log;
 
 public class DatabaseProvider extends ContentProvider {
@@ -18,13 +19,10 @@ public class DatabaseProvider extends ContentProvider {
 
     public static final Uri CONTACTS_URI =
             Uri.withAppendedPath(ALL_URI, ContactsTable.TABLE_NAME);
-
-    public static final Uri MESSAGES_URI =
-            Uri.withAppendedPath(ALL_URI, MessagesTable.TABLE_NAME);
-
     public static final Uri CONTACTS_WITH_LAST_MESSAGE_URI =
             Uri.withAppendedPath(CONTACTS_URI, "with_messages");
-
+    public static final Uri MESSAGES_URI =
+            Uri.withAppendedPath(ALL_URI, MessagesTable.TABLE_NAME);
     public static final Uri MESSAGES_FROM_CONTACT_URI =
             Uri.withAppendedPath(MESSAGES_URI, "contact");
 
@@ -33,7 +31,12 @@ public class DatabaseProvider extends ContentProvider {
 
     public static final Uri DELETE_URI =
             Uri.withAppendedPath(AUTHORITY_URI, "delete");
-
+    public static final String[] CONTACTS_WITH_LAST_MESSAGE_PROJECTION =
+            new String[]{
+                    ContactsTable.COLUMN_ID,
+                    ContactsTable.COLUMN_NAME,
+                    MessagesTable.COLUMN_CONTENT
+            };
     private static final int CONTACTS = 1;
     private static final int CONTACTS_ID = 2;
     private static final int MESSAGES = 3;
@@ -42,14 +45,6 @@ public class DatabaseProvider extends ContentProvider {
     private static final int CONTACTS_WITH_LAST_MESSAGE = 6;
     private static final int MESSAGES_FROM_CONTACT = 7;
     private static final int ALL = 8;
-
-    public static final String[] CONTACTS_WITH_LAST_MESSAGE_PROJECTION =
-            new String[]{
-                    ContactsTable.COLUMN_ID,
-                    ContactsTable.COLUMN_NAME,
-                    MessagesTable.COLUMN_CONTENT
-            };
-
     private static final UriMatcher sUriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
 
     static {
@@ -251,8 +246,7 @@ public class DatabaseProvider extends ContentProvider {
     }
 
     private Cursor queryTable(String table, String[] projection, String selection,
-                              String[] selectionArgs, String sortOrder)
-    {
+                              String[] selectionArgs, String sortOrder) {
         SQLiteDatabase db = mHelper.getReadableDatabase();
         SQLiteQueryBuilder builder = new SQLiteQueryBuilder();
         builder.setTables(table);
@@ -263,13 +257,38 @@ public class DatabaseProvider extends ContentProvider {
     @Override
     public int update(Uri uri, ContentValues values, String selection,
                       String[] selectionArgs) {
-        // TODO: Implement this to handle requests to update one or more rows.
 
-        switch(sUriMatcher.match(uri)) {
+        int rowsUpdated = 0;
+        switch (sUriMatcher.match(uri)) {
             case MESSAGES_ID:
-
+                rowsUpdated = updateMessage(uri, values, selection, selectionArgs);
+                getContext().getContentResolver().notifyChange(ALL_URI, null);
+                return rowsUpdated;
         }
 
         throw new UnsupportedOperationException("Not yet implemented");
+    }
+
+    private int updateMessage(Uri uri, ContentValues values, String selection, String[] selectionArgs) {
+        SQLiteDatabase db = mHelper.getReadableDatabase();
+
+        long id = ContentUris.parseId(uri);
+        int rowsUpdated;
+
+        if (TextUtils.isEmpty(selection)) {
+            rowsUpdated = db.update(MessagesTable.TABLE_NAME,
+                    values,
+                    MessagesTable.COLUMN_ID + "=" + id,
+                    null);
+        } else {
+            rowsUpdated = db.update(MessagesTable.TABLE_NAME,
+                    values,
+                    MessagesTable.COLUMN_ID + "=" + id
+                            + " and "
+                            + selection,
+                    selectionArgs);
+
+        }
+        return rowsUpdated;
     }
 }

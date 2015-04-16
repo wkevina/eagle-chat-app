@@ -595,7 +595,7 @@ public class Peregrine {
     }
 
     private byte[] formatSendPublicKeyCommand(int nodeId, String publicKey) {
-        return (KEY + DELIM + Integer.toString(nodeId) + DELIM + publicKey).getBytes();
+        return (KEY + DELIM + Integer.toString(nodeId) + DELIM + publicKey + END).getBytes();
     }
 
     private interface MessageResolverFilter {

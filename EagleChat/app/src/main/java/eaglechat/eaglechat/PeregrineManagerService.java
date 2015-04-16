@@ -3,6 +3,7 @@ package eaglechat.eaglechat;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.ContentUris;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -12,6 +13,7 @@ import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
@@ -22,21 +24,18 @@ import android.widget.Toast;
 import com.hoho.android.usbserial.driver.CdcAcmSerialDriver;
 import com.hoho.android.usbserial.driver.UsbSerialDriver;
 import com.hoho.android.usbserial.driver.UsbSerialPort;
+import com.hoho.android.usbserial.util.SendWrapper;
 import com.hoho.android.usbserial.util.SerialInputOutputManager;
 
-import org.jdeferred.AlwaysCallback;
 import org.jdeferred.Deferred;
-import org.jdeferred.DeferredFutureTask;
 import org.jdeferred.DoneCallback;
-import org.jdeferred.DoneFilter;
-import org.jdeferred.DonePipe;
 import org.jdeferred.FailCallback;
-import org.jdeferred.FailPipe;
-import org.jdeferred.Promise;
 import org.jdeferred.impl.DeferredObject;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -95,7 +94,6 @@ public class PeregrineManagerService extends Service {
     private Peregrine mPeregrine;
     private SendManager mSendManager;
 
-
     public PeregrineManagerService() {
 
     }
@@ -110,6 +108,7 @@ public class PeregrineManagerService extends Service {
         Log.d(TAG, boardSays);
         mPeregrine.onData(boardSays);
     }
+
 
     @Override
     public void onCreate() {
@@ -278,18 +277,18 @@ public class PeregrineManagerService extends Service {
         public void start() {
             if (!started) {
                 queryAndSend();
-
-//                mHandler.post(new Runnable() {
-//                    @Override
-//                    public void run() {
-//                        queryAndSend();
-//                    }
-//                });
             }
             started = true;
         }
 
         private void queryAndSend() {
+
+            if (mPeregrine == null) {
+                Toast.makeText(PeregrineManagerService.this, "EagleChat device unavailable", Toast.LENGTH_SHORT)
+                        .show();
+            }
+
+
             mCursor = getContentResolver().query(
                     DatabaseProvider.MESSAGES_UNSENT_URI,
                     msgProj, null, null, null);
@@ -300,8 +299,7 @@ public class PeregrineManagerService extends Service {
             int contentIndex = mCursor.getColumnIndex(MessagesTable.COLUMN_CONTENT);
             int sentIndex = mCursor.getColumnIndex(MessagesTable.COLUMN_SENT);
 
-            Deferred deferred = null;
-
+            List<SendWrapper> wrapperList = new ArrayList<>();
             while (mCursor.moveToNext()) {
                 // sanity check
                 int sent = mCursor.getInt(sentIndex);
@@ -341,97 +339,167 @@ public class PeregrineManagerService extends Service {
                     contact.close();
                 }
 
-                // we should have all identifies for the destination by now
-
                 String content = mCursor.getString(contentIndex);
 
-                final String frecNodeId = recNodeId;
-                final String fpublicKey = publicKey;
-                final String fcontent = content;
-                final int fmsgId = msgId;
+                SendWrapper wrapper = new SendWrapper();
 
-                Deferred catchDeferred = new DeferredObject();
+                wrapper.nodeId = recNodeId;
+                wrapper.publicKey = publicKey;
+                wrapper.content = content;
+                wrapper.msgId = msgId;
 
-                final Deferred oldDeferred = deferred;
+                wrapperList.add(wrapper);
 
-                deferred = sendMessage(catchDeferred, Integer.parseInt(frecNodeId, 16), fpublicKey, fcontent, fmsgId);
+            }
 
-                final Deferred resendDeferred = sendMessage(oldDeferred, Integer.parseInt(frecNodeId, 16), fpublicKey, fcontent, fmsgId);
+            AsyncTask<List<SendWrapper>, Void, Void> sendTask = new AsyncTask<List<SendWrapper>, Void, Void>() {
+                @Override
+                protected Void doInBackground(List<SendWrapper>... params) {
 
-                final Deferred publicKeyDeferred = sendKey(resendDeferred, Integer.parseInt(frecNodeId, 16), fpublicKey);
+                    List<SendWrapper> list = params[0];
+                    if (list == null)
+                        return null;
 
+                    for (int i = 0; i < list.size(); ++i) {
+                        final SendWrapper w = list.get(i);
 
-                catchDeferred.done(new DoneCallback() {
-                    @Override
-                    public void onDone(Object result) {
-                        if (oldDeferred != null)
-                            oldDeferred.resolve(new Object());
+                        final Deferred sendDeferred = new DeferredObject();
+
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Log.d(TAG, "Main thread, running sendmessage");
+                                sendMessage(sendDeferred, Integer.parseInt(w.nodeId, 16), w.publicKey, w.content, w.msgId);
+                            }
+                        });
+
+                        try {
+                            sendDeferred.waitSafely();
+                        } catch (InterruptedException ex) {
+
+                        }
+
+                        if (sendDeferred.isRejected()) {
+                            Log.d(TAG, "Trying to send public key.");
+                            final Deferred keyDeferred = new DeferredObject();
+
+                            runOnUiThread(new Runnable() {
+                                @Override
+                                public void run() {
+                                    Log.d(TAG, "Main thread, running sendmessage");
+                                    sendKey(keyDeferred, Integer.parseInt(w.nodeId, 16), w.publicKey);
+                                }
+                            });
+
+                            try {
+                                keyDeferred.waitSafely();
+                            } catch (InterruptedException ex) {
+
+                            }
+
+                            if (keyDeferred.isResolved()) {
+                                Log.d(TAG, "Sent key.");
+
+                                final Deferred resendDeferred = new DeferredObject();
+
+                                runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        Log.d(TAG, "Main thread, running sendmessage");
+                                        sendMessage(resendDeferred, Integer.parseInt(w.nodeId, 16), w.publicKey, w.content, w.msgId);
+                                    }
+                                });
+
+                                try {
+                                    resendDeferred.waitSafely();
+                                } catch (InterruptedException ex) {
+
+                                }
+                                if (resendDeferred.isResolved()) {
+                                    Log.d(TAG, "Sent 1 message.");
+                                    notifyMessageSent(w.msgId);
+                                }
+                            } else {
+                                Log.d(TAG, "Something else happened.");
+                            }
+                        } else {
+                            Log.d(TAG, "Sent 1 message.");
+                            notifyMessageSent(w.msgId);
+                        }
+
                     }
-                }).fail(new FailCallback() {
+
+
+                    return null;
+                }
+            };
+
+            sendTask.execute(wrapperList);
+
+        }
+
+        private void notifyMessageSent(long msgId) {
+
+            Uri msgUri = ContentUris.withAppendedId(DatabaseProvider.MESSAGES_URI, msgId);
+
+            ContentValues values = new ContentValues();
+            values.put(MessagesTable.COLUMN_SENT, MessagesTable.SENT);
+            getContentResolver().update(msgUri, values, null, null);
+            //getContentResolver().
+        }
+
+        private void sendMessage(final Deferred outerDeferred, final int nodeId, final String publicKey, final String content, final int messageId) {
+
+
+            Log.d(TAG, "== 383 == commandSendMessage");
+            if (mPeregrine != null) {
+                mPeregrine.commandSendMessage(nodeId, content)
+
+                        .done(new DoneCallback<String>() {
+                            @Override
+                            public void onDone(String result) {
+                                Log.d(TAG, "sendMessage resolving outerDeferred.");
+                                outerDeferred.resolve("DONE");
+                            }
+                        }).fail(new FailCallback<String>() {
                     @Override
-                    public void onFail(Object result) {
-                        publicKeyDeferred.resolve(new Object());
+                    public void onFail(String result) {
+                        Log.d(TAG, "sendMessage rejecting outerDeferred.");
+                        outerDeferred.reject("SEND PUBLIC KEY");
                     }
                 });
+            } else {
+                Log.d(TAG, "Failing to send message. No Peregrine available.");
+                outerDeferred.reject("NO PEREGRINE.");
+            }
 
-            }
-            if (deferred != null) {
-                deferred.resolve("RESOLVED!!!!");
-            }
+
         }
 
-        private Deferred sendMessage(final Deferred outerDeferred, final int nodeId, final String publicKey, final String content, final int messageId) {
+        private void sendKey(final Deferred outerDeferred, final int nodeId, final String publicKey) {
 
-            final Deferred d = new DeferredObject();
+            Log.d(TAG, "sendKey ====");
+            if (mPeregrine != null) {
+                mPeregrine.commandSendPublicKey(nodeId, publicKey)
 
-            Promise p = d.promise();
-            Log.d(TAG, "== 383 == commandSendMessage");
-            p.then(new DonePipe() {
-                @Override
-                public Promise pipeDone(Object result) {
-                    return mPeregrine.commandSendMessage(nodeId, content)
-
-                            .done(new DoneCallback<String>() {
-                                @Override
-                                public void onDone(String result) {
-                                    Log.d(TAG, "sendMessage resolving outerDeferred.");
-                                    outerDeferred.resolve("DONE");
-                                }
-                            }).fail(new FailCallback<String>() {
-                                @Override
-                                public void onFail(String result) {
-                                    Log.d(TAG, "sendMessage rejecting outerDeferred.");
-                                    outerDeferred.reject("SEND PUBLIC KEY");
-                                }
-                            });
-                }
-            });
-
-            return d;
-        }
-
-        private Deferred sendKey(final Deferred outerDeferred, final int nodeId, final String publicKey) {
-
-            final Deferred d = new DeferredObject();
-
-            Promise p = d.promise();
-            Log.d(TAG, "== 418 == commandSendPublicKey");
-            p.then(new DonePipe() {
-                @Override
-                public Promise pipeDone(Object result) {
-                    return mPeregrine.commandSendPublicKey(nodeId, publicKey)
-
-                            .done(new DoneCallback<String>() {
-                                @Override
-                                public void onDone(String result) {
-                                    Log.d(TAG, "sendMessage resolving outerDeferred.");
-                                    outerDeferred.resolve("DONE");
-                                }
-                            });
-                }
-            });
-
-            return d;
+                        .done(new DoneCallback<String>() {
+                            @Override
+                            public void onDone(String result) {
+                                Log.d(TAG, "sendKey resolving outerDeferred.");
+                                outerDeferred.resolve("DONE");
+                            }
+                        })
+                        .fail(new FailCallback<String>() {
+                            @Override
+                            public void onFail(String result) {
+                                Log.d(TAG, "sendKey failing outerDeferred");
+                                outerDeferred.reject("FAIL");
+                            }
+                        });
+            } else {
+                Log.d(TAG, "Failing to send key. No Peregrine available.");
+                outerDeferred.reject("NO PEREGRINE.");
+            }
         }
 
         private final ContentObserver mObserver = new ContentObserver(mHandler) {
