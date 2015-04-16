@@ -70,9 +70,9 @@ public class MyDetailsActivity extends ActionBarActivity {
         mKeyText = (TextView) findViewById(R.id.text_publicKey);
         mNetworkIdText = (TextView) findViewById(R.id.text_address);
 
-        Log.d(getPackageName(), String.format("Public key=%s", eaglechat.eaglechat.Util.bytesToString(mPublicKey, ":")));
+        Log.d(getPackageName(), String.format("Public key=%s", Util.bytesToString(mPublicKey, ":")));
 
-        String f = eaglechat.eaglechat.Util.fingerprint(mPublicKey, eaglechat.eaglechat.Util.hexStringToBytes(mNetworkId));
+        String f = Util.fingerprint(mPublicKey, eaglechat.eaglechat.Util.hexStringToBytes(mNetworkId));
         mFingerPrintText.setText(f);
 
         mKeyText.setText(eaglechat.eaglechat.Util.bytesToString(mPublicKey, " "));

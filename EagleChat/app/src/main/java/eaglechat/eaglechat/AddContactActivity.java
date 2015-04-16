@@ -153,7 +153,7 @@ public class AddContactActivity extends ActionBarActivity {
         }
 
         if (publicKeyBytes.length != 32) {
-
+            Log.d(TAG, "key length = " + publicKeyBytes.length);
             Toast.makeText(this, "Invalid public key", Toast.LENGTH_LONG).show();
             return;
         }
@@ -162,7 +162,7 @@ public class AddContactActivity extends ActionBarActivity {
             mNameText.setText(chunks[3]);
         }
 
-        mPublicKey = Util.bytesToString(publicKeyBytes, "");
+        mPublicKey = Util.bytesToString(publicKeyBytes, "").toUpperCase();
         mPublicKeyText.setText(Util.bytesToString(publicKeyBytes, " "));
         mNetworkIdText.setText(networkId);
         mScanButton.setText("Fingerprint: " + Util.fingerprint(publicKeyBytes, Util.hexStringToBytes(networkId)));
@@ -206,7 +206,7 @@ public class AddContactActivity extends ActionBarActivity {
     private void addContact(String networkId, String contactName, String publicKey) {
         ContentValues values = new ContentValues();
 
-        values.put(ContactsTable.COLUMN_NETWORK_ID, networkId);
+        values.put(ContactsTable.COLUMN_NODE_ID, networkId);
         values.put(ContactsTable.COLUMN_NAME, contactName);
         values.put(ContactsTable.COLUMN_PUBLIC_KEY, publicKey);
         getContentResolver().insert(DatabaseProvider.CONTACTS_URI, values);

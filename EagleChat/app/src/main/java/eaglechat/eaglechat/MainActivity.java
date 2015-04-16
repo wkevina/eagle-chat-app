@@ -123,6 +123,9 @@ public class MainActivity extends PeregrineActivity {
     }
 
     private void compareCredentials() {
+
+        Log.d(TAG, "compareCredentials");
+
         // Compare public key and node id to
         SharedPreferences prefs = getSharedPreferences(getString(R.string.shared_prefs_file), Context.MODE_PRIVATE);
 
@@ -140,7 +143,30 @@ public class MainActivity extends PeregrineActivity {
                 .apply();
 
         }
+
+        Log.d(TAG, "done saving");
+
+
+        if (peregrineAvailable()) {
+            Log.d(TAG, "starting send manager");
+
+            getPeregrine().startSendManager();
+        }
+
+        Log.d(TAG, "about to launch contacts activity");
+
         handleLaunchContactsActivity();
+
+
+        /*
+
+        mHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                Log.d(TAG, "about to launch contacts activity");
+                handleLaunchContactsActivity();
+            }
+        }, 500);
         /*
         return prefs.contains(Util.PUBLIC_KEY)
                 && prefs.contains(Util.NODE_ID)
@@ -262,6 +288,7 @@ public class MainActivity extends PeregrineActivity {
     }
 
     private void handleLaunchContactsActivity() {
+        Log.d(TAG, "handleLaunchContactsActivity");
         Intent activityIntent = new Intent(this, ContactsActivity.class);
         startActivity(activityIntent);
         finish();

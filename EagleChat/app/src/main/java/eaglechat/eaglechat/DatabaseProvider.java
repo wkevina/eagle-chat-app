@@ -13,17 +13,23 @@ import android.util.Log;
 public class DatabaseProvider extends ContentProvider {
     public static final String AUTHORITY_STRING = "eaglechat.eaglechat.provider";
     public static final Uri AUTHORITY_URI = Uri.parse("content://" + AUTHORITY_STRING);
+
+    public static final Uri ALL_URI = Uri.withAppendedPath(AUTHORITY_URI, "all");
+
     public static final Uri CONTACTS_URI =
-            Uri.withAppendedPath(AUTHORITY_URI, ContactsTable.TABLE_NAME);
+            Uri.withAppendedPath(ALL_URI, ContactsTable.TABLE_NAME);
 
     public static final Uri MESSAGES_URI =
-            Uri.withAppendedPath(AUTHORITY_URI, MessagesTable.TABLE_NAME);
+            Uri.withAppendedPath(ALL_URI, MessagesTable.TABLE_NAME);
 
     public static final Uri CONTACTS_WITH_LAST_MESSAGE_URI =
             Uri.withAppendedPath(CONTACTS_URI, "with_messages");
 
     public static final Uri MESSAGES_FROM_CONTACT_URI =
             Uri.withAppendedPath(MESSAGES_URI, "contact");
+
+    public static final Uri MESSAGES_UNSENT_URI =
+            Uri.withAppendedPath(AUTHORITY_URI, "unsent");
 
     public static final Uri DELETE_URI =
             Uri.withAppendedPath(AUTHORITY_URI, "delete");
@@ -32,9 +38,10 @@ public class DatabaseProvider extends ContentProvider {
     private static final int CONTACTS_ID = 2;
     private static final int MESSAGES = 3;
     private static final int MESSAGES_ID = 4;
-    private static final int CONTACTS_WITH_LAST_MESSAGE = 5;
-    private static final int MESSAGES_FROM_CONTACT = 6;
-    private static final int ALL = 7;
+    private static final int MESSAGES_UNSENT = 5;
+    private static final int CONTACTS_WITH_LAST_MESSAGE = 6;
+    private static final int MESSAGES_FROM_CONTACT = 7;
+    private static final int ALL = 8;
 
     public static final String[] CONTACTS_WITH_LAST_MESSAGE_PROJECTION =
             new String[]{
@@ -53,10 +60,13 @@ public class DatabaseProvider extends ContentProvider {
 
         sUriMatcher.addURI(AUTHORITY_STRING, MESSAGES_URI.getPath(), MESSAGES);
         sUriMatcher.addURI(AUTHORITY_STRING, MESSAGES_URI.getPath() + "/#", MESSAGES_ID);
+        sUriMatcher.addURI(AUTHORITY_STRING, MESSAGES_UNSENT_URI.getPath(), MESSAGES_UNSENT);
 
         sUriMatcher.addURI(AUTHORITY_STRING, CONTACTS_WITH_LAST_MESSAGE_URI.getPath(), CONTACTS_WITH_LAST_MESSAGE);
         sUriMatcher.addURI(AUTHORITY_STRING, MESSAGES_FROM_CONTACT_URI.getPath() + "/#", MESSAGES_FROM_CONTACT);
     }
+
+    private static final String TAG = "eaglechat.eaglechat";
 
     private DatabaseHelper mHelper;
 
@@ -97,13 +107,14 @@ public class DatabaseProvider extends ContentProvider {
             case MESSAGES:
                 id = insertIntoTable(MessagesTable.TABLE_NAME, values);
                 newUri = insertUri(MESSAGES_URI, id);
+                getContext().getContentResolver().notifyChange(MESSAGES_UNSENT_URI, null);
                 break;
             default:
                 break;
         }
         if (newUri != null) {
-            getContext().getContentResolver().notifyChange(AUTHORITY_URI, null);
-            Log.d(getClass().getSimpleName(), String.format("Inserted row at: %s", newUri));
+            getContext().getContentResolver().notifyChange(ALL_URI, null);
+            Log.d(TAG, String.format("Inserted row at: %s", newUri));
             return newUri;
         }
         //Cursor cursor = query.query(db, projection, selection, selectionArgs, null, null, sortOrder);
@@ -132,30 +143,43 @@ public class DatabaseProvider extends ContentProvider {
 
         Cursor cursor = null;
         switch (sUriMatcher.match(uri)) {
+
             case CONTACTS:
                 cursor = queryTable(ContactsTable.TABLE_NAME, projection, selection, selectionArgs, sortOrder);
                 break;
+
             case CONTACTS_ID:
-                Log.d(getCallingPackage(), uri.toString());
+                Log.d(TAG, uri.toString());
                 cursor = queryTable(
                         ContactsTable.TABLE_NAME,
-                        //"CONTAKT",
                         projection,
                         ContactsTable.COLUMN_ID + " = ?",
                         new String[]{String.valueOf(ContentUris.parseId(uri))},
                         sortOrder);
                 break;
+
             case MESSAGES:
                 cursor = queryTable(MessagesTable.TABLE_NAME, projection, selection, selectionArgs, sortOrder);
                 break;
+
             case CONTACTS_WITH_LAST_MESSAGE:
                 cursor = queryContactsWithLastMessage(projection);
                 break;
+
             case MESSAGES_FROM_CONTACT:
                 cursor = queryMessagesWithContact(uri, projection, selection, selectionArgs, sortOrder);
                 break;
+
+            case MESSAGES_UNSENT:
+                cursor = queryUnsentMessages(uri, projection, selection, selectionArgs, sortOrder);
+
+                /* This cursor gets special treatment */
+                cursor.setNotificationUri(getContext().getContentResolver(), MESSAGES_UNSENT_URI);
+                return cursor;
+
             default:
                 break;
+
         }
         if (cursor != null) {
             cursor.setNotificationUri(getContext().getContentResolver(), AUTHORITY_URI);
@@ -165,8 +189,29 @@ public class DatabaseProvider extends ContentProvider {
         throw new UnsupportedOperationException("Uri not yet implemented: " + uri.toString());
     }
 
+    private Cursor queryUnsentMessages(Uri uri, String[] projection, String selection,
+                                       String[] selectionArgs, String sortOrder) {
+
+        SQLiteDatabase db = mHelper.getReadableDatabase();
+        SQLiteQueryBuilder builder = new SQLiteQueryBuilder();
+
+        builder.setTables(MessagesTable.TABLE_NAME);
+
+        builder.appendWhere( // Select messages from us that have not been marked as sent
+                String.format(
+                        "%s = %s AND " +
+                                "%s = %s",
+                        MessagesTable.COLUMN_SENDER, 0,
+                        MessagesTable.COLUMN_SENT, MessagesTable.UNSENT
+                )
+        );
+
+        return builder.query(db, projection, selection, selectionArgs, null, null, sortOrder);
+    }
+
     private Cursor queryMessagesWithContact(Uri uri, String[] projection, String selection,
                                             String[] selectionArgs, String sortOrder) {
+
         long id = ContentUris.parseId(uri);
 
         SQLiteDatabase db = mHelper.getReadableDatabase();
@@ -182,13 +227,6 @@ public class DatabaseProvider extends ContentProvider {
         );
 
         return builder.query(db, projection, selection, selectionArgs, null, null, sortOrder);
-
-        /*
-        return new CursorLoader(this, DatabaseProvider.MESSAGES_URI, null,
-                MessagesTable.COLUMN_RECEIVER +" = ? OR "+ MessagesTable.COLUMN_SENDER + " = ?",
-                new String[] {String.valueOf(mContactId), String.valueOf(mContactId)},
-                MessagesTable.COLUMN_ID);
-        */
     }
 
     private Cursor queryContactsWithLastMessage(String[] projection) {
@@ -226,6 +264,12 @@ public class DatabaseProvider extends ContentProvider {
     public int update(Uri uri, ContentValues values, String selection,
                       String[] selectionArgs) {
         // TODO: Implement this to handle requests to update one or more rows.
+
+        switch(sUriMatcher.match(uri)) {
+            case MESSAGES_ID:
+
+        }
+
         throw new UnsupportedOperationException("Not yet implemented");
     }
 }

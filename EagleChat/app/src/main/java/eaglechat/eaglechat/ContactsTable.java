@@ -11,7 +11,7 @@ public class ContactsTable {
     public static final String TABLE_NAME = "contacts";
     public static final String COLUMN_ID = "_id";
     public static final String COLUMN_NAME = "name";
-    public static final String COLUMN_NETWORK_ID = "network_id";
+    public static final String COLUMN_NODE_ID = "network_id";
     public static final String COLUMN_PUBLIC_KEY = "public_key";
 
 
@@ -20,7 +20,7 @@ public class ContactsTable {
             "(" +
             COLUMN_ID + " integer primary key autoincrement, " +
             COLUMN_NAME + " text not null, " +
-            COLUMN_NETWORK_ID + " text not null, " +
+            COLUMN_NODE_ID + " text not null, " +
             COLUMN_PUBLIC_KEY + " text not null" +
             ");";
 

@@ -13,6 +13,7 @@ import org.jdeferred.Promise;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.concurrent.LinkedBlockingDeque;
 
 /**
  * Created by kevinward on 4/10/15.
@@ -30,7 +31,7 @@ public class Peregrine {
     public static final String GET = "g";
     public static final String TAG = "eaglechat.eaglechat";
 
-    public static final int TIMEOUT_AFTER = 1000;
+    public static final int TIMEOUT_AFTER = 5000;
     public static final String COMMIT = "c";
     private static final String SET_PASSWORD = "h";
     private static final String AUTHENTICATE = "a";
@@ -47,6 +48,7 @@ public class Peregrine {
     protected final Queue<String> mInputQueue;
     protected final Deque<MessageResolver> mResolverQueue;
     final Handler mHandler = new Handler();
+    private final PeregrineManagerService mManager;
     protected String buffer;
     protected SerialInputOutputManager mSerial;
 
@@ -54,21 +56,29 @@ public class Peregrine {
     protected MessageResolver mResolver;
     private int statusCount = 0;
 
-    public Peregrine() {
-        mInputQueue = new LinkedList<>();
-        mResolverQueue = new LinkedList<>();
+    public Peregrine(PeregrineManagerService manager, SerialInputOutputManager serial) {
+        mManager = manager;
+        mInputQueue = new LinkedBlockingDeque<>();
+        mResolverQueue = new LinkedBlockingDeque<>();
         buffer = "";
+        mSerial = serial;
         //statusTest();
         Log.d(TAG, "Created a peregrine. SQUAAAW");
     }
 
-    public Peregrine(SerialInputOutputManager serial) {
-        this();
-        mSerial = serial;
+    public Peregrine(PeregrineManagerService peregrineManagerService) {
+        this(peregrineManagerService, null);
     }
 
     public void setSerial(SerialInputOutputManager mSerial) {
         this.mSerial = mSerial;
+    }
+
+
+    public void startSendManager() {
+        if (mManager != null) {
+            mManager.startSendManager();
+        }
     }
 
     // Builds a message queue from incoming data, buffering it until END is found in the stream
@@ -151,18 +161,18 @@ public class Peregrine {
             @Override
             public int filter(String msg) {
                 if (!msg.startsWith(REPLY)) {
-                    Log.d(TAG, "Reply doesn't match format.");
+//                    Log.d(TAG, "Reply doesn't match format.");
                     return SKIP;
                 }
                 if (msg.contains(FAIL_REPLY)) {
-                    Log.d(TAG, "Reply was a fail message.");
+//                    Log.d(TAG, "Reply was a fail message.");
                     return REJECT;
                 } else if (msg.matches(GET_STATUS_REPLY)) {
-                    Log.d(TAG, "Reply valid, resolving promise.");
+//                    Log.d(TAG, "Reply valid, resolving promise.");
                     return RESOLVE;
                 }
 
-                Log.d(TAG, "Skipping message.");
+//                Log.d(TAG, "Skipping message.");
 
                 return SKIP;
             }
@@ -214,18 +224,18 @@ public class Peregrine {
             @Override
             public int filter(String msg) {
                 if (!msg.startsWith(REPLY)) {
-                    Log.d(TAG, "Reply doesn't match format.");
+//                    Log.d(TAG, "Reply doesn't match format.");
                     return SKIP;
                 }
                 if (msg.contains(FAIL_REPLY)) {
-                    Log.d(TAG, "Reply was a fail message.");
+//                    Log.d(TAG, "Reply was a fail message.");
                     return REJECT;
                 } else if (msg.matches(SEND_COMMAND_REPLY)) {
-                    Log.d(TAG, "Reply valid, message sent.");
+//                    Log.d(TAG, "Reply valid, message sent.");
                     return RESOLVE;
                 }
 
-                Log.d(TAG, "Skipping message.");
+//                Log.d(TAG, "Skipping message.");
 
                 return SKIP;
             }
@@ -258,18 +268,18 @@ public class Peregrine {
             @Override
             public int filter(String msg) {
                 if (!msg.startsWith(REPLY)) {
-                    Log.d(TAG, "Reply doesn't match format.");
+//                    Log.d(TAG, "Reply doesn't match format.");
                     return SKIP;
                 }
                 if (msg.contains(FAIL_REPLY)) {
-                    Log.d(TAG, "Reply was a fail message.");
+//                    Log.d(TAG, "Reply was a fail message.");
                     return REJECT;
                 } else if (msg.matches(OK_REPLY)) {
-                    Log.d(TAG, "Reply valid, nodeId set.");
+//                    Log.d(TAG, "Reply valid, nodeId set.");
                     return RESOLVE;
                 }
 
-                Log.d(TAG, "Skipping message.");
+//                Log.d(TAG, "Skipping message.");
 
                 return SKIP;
             }
@@ -294,18 +304,18 @@ public class Peregrine {
             @Override
             public int filter(String msg) {
                 if (!msg.startsWith(REPLY)) {
-                    Log.d(TAG, "Reply doesn't match format.");
+//                    Log.d(TAG, "Reply doesn't match format.");
                     return SKIP;
                 }
                 if (msg.contains(FAIL_REPLY)) {
-                    Log.d(TAG, "Reply was a fail message.");
+//                    Log.d(TAG, "Reply was a fail message.");
                     return REJECT;
                 } else if (msg.matches(GET_ID_REPLY)) {
-                    Log.d(TAG, "Reply valid, got node id.");
+//                    Log.d(TAG, "Reply valid, got node id.");
                     return RESOLVE;
                 }
 
-                Log.d(TAG, "Skipping message.");
+//                Log.d(TAG, "Skipping message.");
 
                 return SKIP;
             }
@@ -336,18 +346,18 @@ public class Peregrine {
             @Override
             public int filter(String msg) {
                 if (!msg.startsWith(REPLY)) {
-                    Log.d(TAG, "Reply doesn't match format.");
+//                    Log.d(TAG, "Reply doesn't match format.");
                     return SKIP;
                 }
                 if (msg.contains(FAIL_REPLY)) {
-                    Log.d(TAG, "Reply was a fail message.");
+//                    Log.d(TAG, "Reply was a fail message.");
                     return REJECT;
                 } else if (msg.matches(GET_PUBLIC_KEY_REPLY)) {
-                    Log.d(TAG, "Reply valid, resolving public key.");
+//                    Log.d(TAG, "Reply valid, resolving public key.");
                     return RESOLVE;
                 }
 
-                Log.d(TAG, "Skipping message.");
+//                Log.d(TAG, "Skipping message.");
 
                 return SKIP;
             }
@@ -378,18 +388,18 @@ public class Peregrine {
             @Override
             public int filter(String msg) {
                 if (!msg.startsWith(REPLY)) {
-                    Log.d(TAG, "Reply doesn't match format.");
+//                    Log.d(TAG, "Reply doesn't match format.");
                     return SKIP;
                 }
                 if (msg.contains(FAIL_REPLY)) {
-                    Log.d(TAG, "Reply was a fail message.");
+//                    Log.d(TAG, "Reply was a fail message.");
                     return REJECT;
                 } else if (msg.matches(OK_REPLY)) {
-                    Log.d(TAG, "Reply valid, password set.");
+//                    Log.d(TAG, "Reply valid, password set.");
                     return RESOLVE;
                 }
 
-                Log.d(TAG, "Skipping message.");
+//                Log.d(TAG, "Skipping message.");
 
                 return SKIP;
             }
@@ -418,18 +428,18 @@ public class Peregrine {
             @Override
             public int filter(String msg) {
                 if (!msg.startsWith(REPLY)) {
-                    Log.d(TAG, "Reply doesn't match format.");
+//                    Log.d(TAG, "Reply doesn't match format.");
                     return SKIP;
                 }
                 if (msg.contains(FAIL_REPLY)) {
-                    Log.d(TAG, "Reply was a fail message.");
+//                    Log.d(TAG, "Reply was a fail message.");
                     return REJECT;
                 } else if (msg.matches(OK_REPLY)) {
-                    Log.d(TAG, "Reply valid, authenticated.");
+//                    Log.d(TAG, "Reply valid, authenticated.");
                     return RESOLVE;
                 }
 
-                Log.d(TAG, "Skipping message.");
+//                Log.d(TAG, "Skipping message.");
 
                 return SKIP;
             }
@@ -455,18 +465,18 @@ public class Peregrine {
             @Override
             public int filter(String msg) {
                 if (!msg.startsWith(REPLY)) {
-                    Log.d(TAG, "Reply doesn't match format.");
+//                    Log.d(TAG, "Reply doesn't match format.");
                     return SKIP;
                 }
                 if (msg.contains(FAIL_REPLY)) {
-                    Log.d(TAG, "Reply was a fail message.");
+//                    Log.d(TAG, "Reply was a fail message.");
                     return REJECT;
                 } else if (msg.matches(OK_REPLY)) {
-                    Log.d(TAG, "Reply valid, resolving generate command.");
+//                    Log.d(TAG, "Reply valid, resolving generate command.");
                     return RESOLVE;
                 }
 
-                Log.d(TAG, "Skipping message.");
+//                Log.d(TAG, "Skipping message.");
 
                 return SKIP;
             }
@@ -490,18 +500,18 @@ public class Peregrine {
             @Override
             public int filter(String msg) {
                 if (!msg.startsWith(REPLY)) {
-                    Log.d(TAG, "Reply doesn't match format.");
+//                    Log.d(TAG, "Reply doesn't match format.");
                     return SKIP;
                 }
                 if (msg.contains(FAIL_REPLY)) {
-                    Log.d(TAG, "Reply was a fail message.");
+//                    Log.d(TAG, "Reply was a fail message.");
                     return REJECT;
                 } else if (msg.matches(OK_REPLY)) {
-                    Log.d(TAG, "Reply valid, resolving generate command.");
+//                    Log.d(TAG, "Reply valid, resolving generate command.");
                     return RESOLVE;
                 }
 
-                Log.d(TAG, "Skipping message.");
+//                Log.d(TAG, "Skipping message.");
 
                 return SKIP;
             }
@@ -527,7 +537,8 @@ public class Peregrine {
 
                     writeOrCancel(messageBytes, writeResolver);
                     writeResolver.startTimer();
-
+                    // Queue the resolver
+                    mResolverQueue.offer(writeResolver);
                 }
 
             });
@@ -535,13 +546,12 @@ public class Peregrine {
         } else {
             Log.d(TAG, "Writing immediately.");
 
-            writeOrCancel(messageBytes, writeResolver);
             writeResolver.startTimer();
+            writeOrCancel(messageBytes, writeResolver);
+            // Queue the resolver
+            mResolverQueue.offer(writeResolver);
 
         }
-
-        // Queue the resolver
-        mResolverQueue.offer(writeResolver);
 
         return writeResolver.getPromise();
     }
@@ -551,6 +561,39 @@ public class Peregrine {
             throw new IllegalArgumentException("key must be 32 bytes long");
         }
         return (KEY + DELIM + String.valueOf(dest) + DELIM + new String(key) + END).getBytes();
+    }
+
+    public Promise<String, String, String> commandSendPublicKey(int nodeId, String publicKey) {
+        Promise<String, String, String> pubPromise;
+
+        byte[] msg = formatSendPublicKeyCommand(nodeId, publicKey);
+
+        pubPromise = deferredWrite(msg, new MessageResolverFilter() {
+            @Override
+            public int filter(String msg) {
+                if (!msg.startsWith(REPLY)) {
+//                    Log.d(TAG, "Reply doesn't match format.");
+                    return SKIP;
+                }
+                if (msg.contains(FAIL_REPLY)) {
+//                    Log.d(TAG, "Reply was a fail message.");
+                    return REJECT;
+                } else if (msg.matches(OK_REPLY)) {
+//                    Log.d(TAG, "Reply valid, resolving generate command.");
+                    return RESOLVE;
+                }
+
+//                Log.d(TAG, "Skipping message.");
+
+                return SKIP;
+            }
+        });
+
+        return pubPromise;
+    }
+
+    private byte[] formatSendPublicKeyCommand(int nodeId, String publicKey) {
+        return (KEY + DELIM + Integer.toString(nodeId) + DELIM + publicKey).getBytes();
     }
 
     private interface MessageResolverFilter {
@@ -583,7 +626,7 @@ public class Peregrine {
             if (mDeferred.isPending()) {
                 int result = mFilter.filter(msg);
 
-                Log.d(TAG, "Filtering reply");
+//                Log.d(TAG, "Filtering reply");
 
                 switch (result) {
                     case MessageResolverFilter.RESOLVE:
@@ -608,6 +651,9 @@ public class Peregrine {
             return !mDeferred.isPending();
         }
     }
+
+
+
 
 }
 

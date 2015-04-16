@@ -109,6 +109,7 @@ public class ConversationActivity extends CompatListActivity implements
                     values.put(MessagesTable.COLUMN_RECEIVER, mContactId);
                     values.put(MessagesTable.COLUMN_SENDER, 0);
                     values.put(MessagesTable.COLUMN_CONTENT, message);
+                    values.put(MessagesTable.COLUMN_SENT, MessagesTable.UNSENT);
                     getContentResolver().insert(DatabaseProvider.MESSAGES_URI, values);
                     return null;
                 }

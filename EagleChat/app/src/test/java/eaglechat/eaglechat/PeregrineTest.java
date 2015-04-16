@@ -12,7 +12,7 @@ public class PeregrineTest extends TestCase {
 
     public void setUp() throws Exception {
         super.setUp();
-        mPeregrine = new Peregrine();
+        mPeregrine = new Peregrine(this, mSerialIoManager);
     }
 
     public void tearDown() throws Exception {

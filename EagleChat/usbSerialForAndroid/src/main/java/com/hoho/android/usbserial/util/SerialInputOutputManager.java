@@ -37,7 +37,7 @@ import java.nio.ByteBuffer;
  */
 public class SerialInputOutputManager implements Runnable {
 
-    private static final String TAG = "eaglechat.eaglechat";
+    private static final String TAG = "usb";
     private static final boolean DEBUG = true;
 
     private static final int READ_WAIT_MILLIS = 1000;
