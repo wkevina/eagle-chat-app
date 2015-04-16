@@ -1,5 +1,9 @@
 package eaglechat.eaglechat;
 
+import android.content.ContentValues;
+import android.content.Context;
+import android.database.Cursor;
+import android.os.AsyncTask;
 import android.os.Handler;
 import android.util.Log;
 
@@ -34,7 +38,8 @@ public class Peregrine {
     public static final String TAG = "eaglechat.eaglechat";
 
     public static final int TIMEOUT_AFTER = 5000;
-    public static final String COMMIT = "c";
+
+    private static final String COMMIT = "c";
     private static final String SET_PASSWORD = "h";
     private static final String AUTHENTICATE = "a";
     private static final String REPLY = "x";
@@ -45,6 +50,10 @@ public class Peregrine {
     private static final String SEND_COMMAND_REPLY = "^" + REPLY + DELIM + OK;
     private static final String GET_PUBLIC_KEY_REPLY = "^" + REPLY + DELIM + "[0-9A-F]{64,}$";
     private static final String GEN_KEYS = "k";
+
+    private static final String MSG_RECD = "^r:[0-9A-F]{2,}:.+";
+
+
     // get status g:s:255   ^g:s:\d{1,3}
     // get public key g:p:[32 bytes]    ^g:p:.{32}
     protected final Queue<String> mInputQueue;
@@ -107,7 +116,12 @@ public class Peregrine {
             Log.d(TAG, "processQueue: Head: " + currentMessage);
 
             // Handle incoming messages here
-
+            if (currentMessage.matches(MSG_RECD)) {
+                // we have a message from another node!
+                Log.d(TAG, "Message received!");
+                handleReceivedMessage(currentMessage);
+                continue;
+            }
 
             // Service deferred tasks
             if (!mResolverQueue.isEmpty()) {
@@ -140,6 +154,61 @@ public class Peregrine {
 
             }
         }
+    }
+
+    private void handleReceivedMessage(String msg) {
+        (new AsyncTask<String,Void,Void>() {
+
+            @Override
+            protected Void doInBackground(String... params) {
+                if (params.length < 1)
+                    return null;
+
+                String[] chunks = params[0].split(DELIM);
+
+                if (chunks.length < 3)
+                    return null;
+
+                String sourceIdHex = chunks[1];
+                String content = chunks[2];
+
+                String[] proj = {ContactsTable.COLUMN_ID, ContactsTable.COLUMN_NODE_ID};
+
+                Cursor contactCursor = mManager
+                        .getContentResolver()
+                        .query(DatabaseProvider.CONTACTS_URI, proj,
+                                ContactsTable.COLUMN_NODE_ID + " = ?", new String[]{sourceIdHex},
+                                null);
+
+                if (contactCursor.moveToNext()) {
+                    // sanity check
+                    int nodeIdIndex = contactCursor.getColumnIndex(ContactsTable.COLUMN_NODE_ID);
+                    int contactIndex = contactCursor.getColumnIndex(ContactsTable.COLUMN_ID);
+
+                    String contactIdHex = contactCursor.getString(nodeIdIndex);
+
+                    if (!sourceIdHex.equals(contactIdHex)) {
+                        Log.d(TAG, "Sender not found in contacts.");
+                        Log.d(TAG, "Received: " + params[0]);
+                        return null;
+                    }
+
+                    long contactId = contactCursor.getInt(contactIndex);
+
+                    ContentValues values = new ContentValues();
+                    values.put(MessagesTable.COLUMN_RECEIVER, 0);
+                    values.put(MessagesTable.COLUMN_SENDER, contactId);
+                    values.put(MessagesTable.COLUMN_CONTENT, content);
+                    values.put(MessagesTable.COLUMN_SENT, MessagesTable.SENT);
+                    mManager.getContentResolver().insert(DatabaseProvider.MESSAGES_URI, values);
+
+                    Log.d(TAG, "Stored message.");
+
+                }
+
+                return null;
+            }
+        }).execute(msg);
     }
 
 
@@ -596,6 +665,13 @@ public class Peregrine {
 
     private byte[] formatSendPublicKeyCommand(int nodeId, String publicKey) {
         return (KEY + DELIM + Integer.toString(nodeId) + DELIM + publicKey + END).getBytes();
+    }
+
+    public void commandBurn() {
+        mResolverQueue.clear();
+        mInputQueue.clear();
+        if (mSerial != null)
+            mSerial.writeAsync("BURN\n".getBytes()); // take shortcut to ensure this happens NOW
     }
 
     private interface MessageResolverFilter {

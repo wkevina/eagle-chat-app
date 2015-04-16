@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.support.v4.content.LocalBroadcastManager;
 
 import com.google.zxing.common.BitMatrix;
 
@@ -86,6 +87,10 @@ public class Util {
 
     @SuppressLint("CommitPrefEdits")
     public static void burn(Context activity) {
+        activity.getContentResolver().delete(DatabaseProvider.DELETE_URI, null, null);
+
+        LocalBroadcastManager.getInstance(activity).sendBroadcastSync(new Intent(PeregrineManagerService.BURN));
+
         SharedPreferences.Editor editor =
                 activity.getSharedPreferences(
                         activity.getString(R.string.shared_prefs_file),
@@ -93,7 +98,6 @@ public class Util {
                         .edit();
 
         editor.clear().commit();
-        activity.getContentResolver().delete(DatabaseProvider.DELETE_URI, null, null);
         restart(activity);
     }
 

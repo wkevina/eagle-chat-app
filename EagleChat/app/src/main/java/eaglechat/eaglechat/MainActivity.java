@@ -106,6 +106,7 @@ public class MainActivity extends PeregrineActivity {
             @Override
             public Promise<Integer, String, String> pipeDone(String result) {
                 mPublicKey = result;
+                Log.d(TAG, "Public key: " + result);
                 return mPeregrine.requestId();
             }
         }).done(new DoneCallback<Integer>() {
@@ -266,6 +267,7 @@ public class MainActivity extends PeregrineActivity {
     @Override
     void onPeregrineUnavailable() {
         Util.restart(this);
+        finish();
     }
 
     private void handleLaunchUsbActivity() {

@@ -157,7 +157,6 @@ public class SerialInputOutputManager implements Runnable {
 
     private void step() throws IOException {
         // Handle incoming data.
-        Log.d(TAG, "=== step ===");
 
         int len = mDriver.read(mReadBuffer.array(), READ_WAIT_MILLIS);
         if (len > 0) {

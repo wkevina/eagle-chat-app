@@ -123,7 +123,7 @@ public class MyDetailsActivity extends ActionBarActivity {
 
         switch (id) {
             case R.id.action_burn:
-                eaglechat.eaglechat.Util.burn(this);
+                Util.burn(this);
                 finish();
                 return true;
         }

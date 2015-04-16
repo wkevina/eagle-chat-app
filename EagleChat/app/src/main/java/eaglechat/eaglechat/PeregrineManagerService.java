@@ -41,11 +41,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class PeregrineManagerService extends Service {
+
     private static final String TAG = "eaglechat.eaglechat";
 
     public static final String SERVICE_AVAILABLE = TAG + ".SERVICE_AVAILABLE";
     public static final String SERVICE_DISCONNECTED = TAG + ".SERVICE_DISCONNECTED";
-    BroadcastReceiver mDeviceStateReceiver = new BroadcastReceiver() {
+    public static String BURN = TAG + ".BURN";
+
+    BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
 
@@ -62,6 +65,12 @@ public class PeregrineManagerService extends Service {
                 stopIoManager();
 
                 stopSelf();
+            }
+
+            if (action.equals(BURN)) {
+                if (mPeregrine != null) {
+                    mPeregrine.commandBurn();
+                }
             }
         }
     };
@@ -117,8 +126,10 @@ public class PeregrineManagerService extends Service {
         mHandler = new Handler();
 
 
-        LocalBroadcastManager.getInstance(this).registerReceiver(mDeviceStateReceiver,
+        LocalBroadcastManager.getInstance(this).registerReceiver(mReceiver,
                 new IntentFilter(DeviceConnectionReceiver.DEVICE_DETACHED));
+        LocalBroadcastManager.getInstance(this).registerReceiver(mReceiver,
+                new IntentFilter(BURN));
     }
 
     @Override
@@ -246,8 +257,8 @@ public class PeregrineManagerService extends Service {
     public void startSendManager() {
         if (mSendManager == null) {
             mSendManager = new SendManager();
+            mSendManager.start();
         }
-        mSendManager.start();
     }
 
     public class PeregrineBinder extends Binder {
@@ -267,6 +278,7 @@ public class PeregrineManagerService extends Service {
         boolean started = false;
         private Map<Integer, String> mNodeIdsMap;
         private Map<Integer, String> mKeysMap;
+        private boolean mBusySending;
 
         public SendManager() {
             Log.d(TAG, "SendManager created");
@@ -282,10 +294,19 @@ public class PeregrineManagerService extends Service {
         }
 
         private void queryAndSend() {
+            Log.d(TAG, "queryAndSend");
+            if (mBusySending)
+                return;
+
+            Log.d(TAG, "queryAndSend running.");
+
+            mBusySending = true;
 
             if (mPeregrine == null) {
-                Toast.makeText(PeregrineManagerService.this, "EagleChat device unavailable", Toast.LENGTH_SHORT)
-                        .show();
+                Log.d(TAG, "queryAndSend, board unavailable");
+
+                //Toast.makeText(PeregrineManagerService.this, "EagleChat device unavailable", Toast.LENGTH_SHORT)
+                //        .show();
             }
 
 
@@ -428,7 +449,7 @@ public class PeregrineManagerService extends Service {
                         }
 
                     }
-
+                    mBusySending = false;
 
                     return null;
                 }
