@@ -13,6 +13,8 @@ import org.jdeferred.Promise;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 
 /**
@@ -58,8 +60,8 @@ public class Peregrine {
 
     public Peregrine(PeregrineManagerService manager, SerialInputOutputManager serial) {
         mManager = manager;
-        mInputQueue = new LinkedBlockingDeque<>();
-        mResolverQueue = new LinkedBlockingDeque<>();
+        mInputQueue = new ConcurrentLinkedQueue<>();
+        mResolverQueue = new LinkedList<>();
         buffer = "";
         mSerial = serial;
         //statusTest();
@@ -608,6 +610,7 @@ public class Peregrine {
     private static class MessageResolver {
         private eaglechat.eaglechat.DeferredObjectWithTimeout<String, String, String> mDeferred;
         private MessageResolverFilter mFilter;
+        private Handler mHandler = new Handler();
 
         public MessageResolver(MessageResolverFilter filter, long timeoutAfter) {
             mFilter = filter;
@@ -630,16 +633,38 @@ public class Peregrine {
 
                 switch (result) {
                     case MessageResolverFilter.RESOLVE:
-                        mDeferred.resolve(msg);
+                        mDeferred.stopTimer();
+                        resolveInFuture(msg, 100);
                         return true;
                     case MessageResolverFilter.REJECT:
-                        mDeferred.reject(msg);
+                        mDeferred.stopTimer();
+                        rejectInFuture(msg, 100);
                         return true;
                     case MessageResolverFilter.SKIP:
                         return false;
                 }
             }
             return true;
+        }
+
+        // Adds a delay between deciding to resolve and the actual resolution
+        private void resolveInFuture(final String result, long millis) {
+            mHandler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    mDeferred.resolve(result);
+                }
+            }, millis);
+        }
+
+        // Adds a delay between deciding to reject and the actual rejection
+        private void rejectInFuture(final String result, long millis) {
+            mHandler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    mDeferred.reject(result);
+                }
+            }, millis);
         }
 
         public void startTimer() {

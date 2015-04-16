@@ -36,6 +36,10 @@ public class DeferredObjectWithTimeout<D, F, P> extends AndroidDeferredObject<D,
         }
     }
 
+    public void stopTimer() {
+        mHandler.removeCallbacks(mTimeoutRunnable);
+    }
+
     @Override
     public Deferred<D, F, P> resolve(D resolve) {
         mHandler.removeCallbacks(mTimeoutRunnable);
