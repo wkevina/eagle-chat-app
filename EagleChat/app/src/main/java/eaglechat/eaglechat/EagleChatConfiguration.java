@@ -79,6 +79,9 @@ public class EagleChatConfiguration {
         if (s.length() > 2) {
             return false;
         }
+        if (s.isEmpty()) {
+            return false;
+        }
         try {
             Integer.parseInt(s, 16);
         } catch (NumberFormatException ex) {

@@ -59,10 +59,10 @@
             android:id="@+id/text_id"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:digits="0123456789abcdef"
-            android:inputType="text|textNoSuggestions"
-            android:minWidth="50dp"
-            android:maxLength="4"
+            android:digits="0123456789abcdefABCDEF"
+            android:inputType="textCapCharacters|textNoSuggestions"
+            android:minEms="2"
+            android:maxLength="2"
             android:singleLine="true"/>
 
         <TextView

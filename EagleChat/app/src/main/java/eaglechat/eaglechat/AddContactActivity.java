@@ -4,7 +4,6 @@ import android.content.ContentValues;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
-import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -21,10 +20,13 @@ import com.google.zxing.integration.android.IntentIntegrator;
 import com.google.zxing.integration.android.IntentResult;
 import com.melnykov.fab.FloatingActionButton;
 
+import org.jdeferred.DoneCallback;
 import org.spongycastle.util.encoders.Base64;
 
+// TODO: SEND PUBLIC KEY TO BOARD ON CONTACT ADD
 
-public class AddContactActivity extends ActionBarActivity {
+
+public class AddContactActivity extends PeregrineActivity {
     public static final String TAG = "eaglechat.eaglechat";
     EditText mNameText, mNetworkIdText, mPublicKeyText;
     Button mScanButton;
@@ -82,6 +84,16 @@ public class AddContactActivity extends ActionBarActivity {
                 return false;
             }
         });
+    }
+
+    @Override
+    void onPeregrineAvailable() {
+
+    }
+
+    @Override
+    void onPeregrineUnavailable() {
+
     }
 
     private void onInputUpdated() {
@@ -182,9 +194,7 @@ public class AddContactActivity extends ActionBarActivity {
         if (networkId.isEmpty()) {
             mNetworkIdText.setError("Enter network ID");
             doesValidate = false;
-        }
-
-        else if (!EagleChatConfiguration.validateNodeId(networkId)) {
+        } else if (!EagleChatConfiguration.validateNodeId(networkId)) {
             mNetworkIdText.setError("Contains invalid characters. Must be hex-format number.");
             doesValidate = false;
         }
@@ -196,11 +206,20 @@ public class AddContactActivity extends ActionBarActivity {
 
         if (!doesValidate) {
             Log.d(this.getLocalClassName(), "Some fields are missing. Cannot continue.");
-        }
-
-        else {
+        } else {
             networkId = Util.padHex(networkId, 2);
             addContact(networkId, contactName, mPublicKey);
+            if (peregrineAvailable()) {
+                getPeregrine().commandSendPublicKey(Integer.parseInt(networkId, 16), mPublicKey)
+                        .then(new DoneCallback<String>() {
+                            @Override
+                            public void onDone(String result) {
+                                finish();
+                            }
+                        });
+            } else {
+                finish();
+            }
         }
     }
 
@@ -211,8 +230,6 @@ public class AddContactActivity extends ActionBarActivity {
         values.put(ContactsTable.COLUMN_NAME, contactName);
         values.put(ContactsTable.COLUMN_PUBLIC_KEY, publicKey);
         getContentResolver().insert(DatabaseProvider.CONTACTS_URI, values);
-
-        finish();
     }
 
     @Override

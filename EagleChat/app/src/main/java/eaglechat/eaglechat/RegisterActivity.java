@@ -64,6 +64,8 @@ public class RegisterActivity extends PeregrineActivity {
         boolean isReady = true;
         String name = mNameText.getText().toString();
 
+
+
         if (name == null || name.isEmpty()) {
             isReady = false;
             mNameText.setError("Enter a name");
@@ -87,13 +89,9 @@ public class RegisterActivity extends PeregrineActivity {
 
         if (isReady) {
 
-            mDoneButton.setEnabled(false);
-
             mName = name;
 
-            final String nodeId = networkIdString;
-
-            commitConfiguration(nodeId, passwordHash);
+            commitConfiguration(networkIdString, passwordHash);
 
             //writeData(name, networkIdString, mPublicKey);
             //Util.restart(this);
@@ -104,7 +102,7 @@ public class RegisterActivity extends PeregrineActivity {
 
     private void commitConfiguration(final String nodeId, final String passwordHash) {
         if (peregrineAvailable()) {
-
+            mDoneButton.setEnabled(false);
             getPeregrine().commandSetPassword(passwordHash)
 
                     .then(new DoneCallback<String>() {
@@ -167,7 +165,7 @@ public class RegisterActivity extends PeregrineActivity {
             public void run() {
                 Util.restart(RegisterActivity.this);
             }
-        }, 750);
+        }, 100);
     }
 
 
