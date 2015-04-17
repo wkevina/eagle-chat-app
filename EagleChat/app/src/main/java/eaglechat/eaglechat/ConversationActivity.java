@@ -45,6 +45,9 @@ public class ConversationActivity extends CompatListActivity implements
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_conversation);
 
+        ListView l = (ListView)findViewById(android.R.id.list);
+        l.setTranscriptMode(ListView.TRANSCRIPT_MODE_ALWAYS_SCROLL);
+
         Bundle bundle = getIntent().getExtras();
         if (bundle != null) {
             mContactId = bundle.getLong(CONTACT_ID, 0);
@@ -60,24 +63,6 @@ public class ConversationActivity extends CompatListActivity implements
                 new int[]{android.R.id.text2},
                 SimpleCursorAdapter.FLAG_REGISTER_CONTENT_OBSERVER
         );
-        /*
-        adapter.setViewBinder(new SimpleCursorAdapter.ViewBinder() {
-            @Override
-            public boolean setViewValue(View view, Cursor cursor, int columnIndex) {
-                int nameColumn = cursor.getColumnIndex(MessagesTable.COLUMN_SENDER);
-                if (columnIndex != nameColumn) {
-                    return false;
-                }
-                long senderId = cursor.getLong(columnIndex);
-                if (senderId == 0) {
-                    view.setVisibility(View.GONE);
-                    return true;
-                }
-                ((TextView) view).setText(mContactName);
-                return true;
-            }
-        });
-        */
 
         setListAdapter(adapter);
 
@@ -170,6 +155,7 @@ public class ConversationActivity extends CompatListActivity implements
 
     @Override
     public Loader<Cursor> onCreateLoader(int id, Bundle args) {
+
         Log.d(getPackageName(), "onCreateLoader called");
         Log.d(getPackageName(), String.format("Loader id=%d", id));
 
@@ -205,12 +191,6 @@ public class ConversationActivity extends CompatListActivity implements
         if (loader.getId() == MESSAGES_LOADER) {
             if (data.getCount() > 0) {
                 ((SimpleCursorAdapter) getListAdapter()).changeCursor(data);
-
-                ListView listView = getListView();
-                SimpleCursorAdapter adapter = (SimpleCursorAdapter) getListAdapter();
-
-                listView.requestFocus();
-                listView.setSelection(adapter.getCount());
             } else {
                 ((SimpleCursorAdapter) getListAdapter()).changeCursor(null);
             }
