@@ -55,10 +55,6 @@ public class RegisterActivity extends PeregrineActivity {
 
     }
 
-    @Override
-    void onPeregrineUnavailable() {
-        Util.restart(this);
-    }
 
     private void submit() {
         boolean isReady = true;

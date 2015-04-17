@@ -60,7 +60,7 @@ public class PeregrineManagerService extends Service {
 
 
                 Intent disconnected = new Intent(SERVICE_DISCONNECTED);
-                LocalBroadcastManager.getInstance(PeregrineManagerService.this).sendBroadcast(disconnected);
+                LocalBroadcastManager.getInstance(PeregrineManagerService.this).sendBroadcastSync(disconnected);
 
                 stopIoManager();
 
@@ -157,12 +157,22 @@ public class PeregrineManagerService extends Service {
             isConnected = true;
         }
 
-        return super.onStartCommand(intent, flags, startId);
+        return START_REDELIVER_INTENT;
     }
 
     @Override
     public IBinder onBind(Intent intent) {
         return mBinder;
+    }
+
+    @Override
+    public boolean onUnbind(Intent intent) {
+        return true;
+    }
+
+    @Override
+    public void onRebind(Intent intent) {
+        Log.d(TAG, "Client re-binding to manager service.");
     }
 
     private void runOnUiThread(Runnable runnable) {
@@ -438,14 +448,14 @@ public class PeregrineManagerService extends Service {
                                 }
                                 if (resendDeferred.isResolved()) {
                                     Log.d(TAG, "Sent 1 message.");
-                                    notifyMessageSent(w.msgId);
+                                    markMessageSent(w.msgId);
                                 }
                             } else {
                                 Log.d(TAG, "Something else happened.");
                             }
                         } else {
                             Log.d(TAG, "Sent 1 message.");
-                            notifyMessageSent(w.msgId);
+                            markMessageSent(w.msgId);
                         }
 
                     }
@@ -459,7 +469,7 @@ public class PeregrineManagerService extends Service {
 
         }
 
-        private void notifyMessageSent(long msgId) {
+        private void markMessageSent(long msgId) {
 
             Uri msgUri = ContentUris.withAppendedId(DatabaseProvider.MESSAGES_URI, msgId);
 

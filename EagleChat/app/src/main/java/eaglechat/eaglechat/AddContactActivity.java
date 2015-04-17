@@ -91,11 +91,6 @@ public class AddContactActivity extends PeregrineActivity {
 
     }
 
-    @Override
-    void onPeregrineUnavailable() {
-
-    }
-
     private void onInputUpdated() {
 
         String pubHex = mPublicKeyText.getText().toString();

@@ -79,8 +79,8 @@ public class DeviceConnectionReceiver extends BroadcastReceiver {
 
     private void notifyDeviceDetached() {
         Log.d(TAG, "Device detached.");
-        Intent intent = new Intent(mContext, PeregrineManagerService.class);
-        mContext.stopService(intent);
+        //Intent intent = new Intent(mContext, PeregrineManagerService.class);
+        //mContext.stopService(intent);
 
         Intent detachedIntent = new Intent(DEVICE_DETACHED);
         LocalBroadcastManager.getInstance(mContext).sendBroadcast(detachedIntent);

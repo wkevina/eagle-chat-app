@@ -175,7 +175,7 @@ import android.widget.TextView;
  * @see #setListAdapter
  * @see android.widget.ListView
  */
-public class CompatListActivity extends ActionBarActivity {
+public class CompatListActivity extends PeregrineActivity {
 
     ListAdapter mAdapter;
     ListView mList;
@@ -228,6 +228,11 @@ public class CompatListActivity extends ActionBarActivity {
     protected void onDestroy() {
         mHandler.removeCallbacks(mRequestFocus);
         super.onDestroy();
+    }
+
+    @Override
+    void onPeregrineAvailable() {
+
     }
 
     /**

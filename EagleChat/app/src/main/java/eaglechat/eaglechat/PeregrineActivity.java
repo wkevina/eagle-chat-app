@@ -6,7 +6,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.support.v4.content.LocalBroadcastManager;
@@ -118,18 +117,18 @@ abstract public class PeregrineActivity extends ActionBarActivity {
     }
 
     public boolean peregrineAvailable() {
-        return mBound;
+        return mBound && (mPeregrine != null);
     }
 
-    protected void bindEagleChat() {
+    protected void bindToPeregrine() {
         Intent eagleIntent = new Intent(PeregrineActivity.this, PeregrineManagerService.class);
         bindService(eagleIntent, mConnection, BIND_IMPORTANT);
     }
 
-
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    protected void onResume() {
+        super.onResume();
+
         LocalBroadcastManager manager = LocalBroadcastManager.getInstance(this);
 
         manager.registerReceiver(mServiceAvailableReceiver,
@@ -138,7 +137,19 @@ abstract public class PeregrineActivity extends ActionBarActivity {
                 new IntentFilter(PeregrineManagerService.SERVICE_DISCONNECTED));
 
         if (PeregrineManagerService.isConnected) {
-            bindEagleChat();
+            bindToPeregrine();
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mServiceAvailableReceiver);
+        if (mBound) {
+            unbindService(mConnection);
+            mBound = false;
+            mPeregrine = null;
         }
     }
 
@@ -152,5 +163,7 @@ abstract public class PeregrineActivity extends ActionBarActivity {
 
     abstract void onPeregrineAvailable();
 
-    abstract void onPeregrineUnavailable();
+    protected void onPeregrineUnavailable() {
+        Util.restart(this);
+    }
 }

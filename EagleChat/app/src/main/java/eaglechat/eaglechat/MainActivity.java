@@ -264,11 +264,13 @@ public class MainActivity extends PeregrineActivity {
         retrievePeripheralStatus();
     }
 
+    /*
     @Override
-    void onPeregrineUnavailable() {
+    protected void onPeregrineUnavailable() {
         Util.restart(this);
         finish();
     }
+    */
 
     private void handleLaunchUsbActivity() {
         Intent activityIntent = new Intent(this, UsbTestActivity.class);
