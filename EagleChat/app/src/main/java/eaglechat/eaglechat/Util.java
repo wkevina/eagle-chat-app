@@ -101,6 +101,16 @@ public class Util {
         restart(activity);
     }
 
+    public static int uniqueSequenceNumber(Context activity) {
+        SharedPreferences prefs = activity.getSharedPreferences(
+                activity.getString(R.string.shared_prefs_file),
+                Context.MODE_PRIVATE);
+
+        int ret = prefs.getInt("UNIQUE_SEQ_NUM", 0);
+        prefs.edit().putInt("UNIQUE_SEQ_NUM", ret + 1).apply();
+        return ret;
+    }
+
     public static void restart(Context activity) {
         Intent intent = new Intent(activity, MainActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);

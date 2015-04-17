@@ -15,6 +15,7 @@ public class MessagesTable {
     public static final String COLUMN_SENDER = "sender";
     public static final String COLUMN_RECEIVER = "receiver";
     public static final String COLUMN_CONTENT = "content";
+    public static final String COLUMN_SEQNUM = "seqnum";
     public static final String COLUMN_SENT = "sent";
 
     public static final int SENT = 1;
@@ -26,7 +27,8 @@ public class MessagesTable {
             COLUMN_ID + " integer primary key autoincrement, " +
             COLUMN_SENDER + " integer not null, " +
             COLUMN_RECEIVER + " integer not null, " +
-            COLUMN_CONTENT + " text not null," +
+            COLUMN_CONTENT + " text not null, " +
+            COLUMN_SEQNUM + " integer not null, " +
             COLUMN_SENT + " integer not null" +
             ");";
 

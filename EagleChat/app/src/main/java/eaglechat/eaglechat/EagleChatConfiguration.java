@@ -1,5 +1,8 @@
 package eaglechat.eaglechat;
 
+import android.util.Base64;
+
+import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
@@ -110,4 +113,44 @@ public class EagleChatConfiguration {
     public static boolean validatePassword(String pwd) {
         return (pwd.length() >= PASSWORD_LENGTH_MIN);
     }
+
+    public static String formatMessage(String content, Integer seqNum) {
+        StringBuilder sb = new StringBuilder();
+        byte[] buf = ByteBuffer.allocate(4).putInt(seqNum).array();
+
+        sb
+                .append("m")
+                .append(Base64.encodeToString(buf, Base64.NO_PADDING|Base64.NO_WRAP))
+                .append(content);
+
+        return sb.toString();
+    }
+
+    public static class DecodedMessage {
+
+        public String content;
+        public Integer seqNum;
+
+        public DecodedMessage(String encoded) {
+
+            if (encoded.startsWith("m")) {
+                // strip prefix
+                encoded = encoded.replaceFirst("m", "");
+            } else {
+                throw new IllegalArgumentException("String argument was not an encoded message");
+            }
+
+
+            if (encoded.length() < 6) // must contain at least the 6 seqNum characaters
+                throw new IllegalArgumentException("String argument does not have delimiter after seqNum");
+
+            byte[] seqNumBytes = Base64.decode(encoded.substring(0, 6),
+                    Base64.NO_PADDING|Base64.NO_WRAP);
+
+            seqNum = ByteBuffer.wrap(seqNumBytes).getInt();
+
+            content = encoded.substring(6);
+        }
+    }
+
 }

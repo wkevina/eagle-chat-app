@@ -105,12 +105,17 @@ public class ConversationActivity extends CompatListActivity implements
             new AsyncTask<Void, Void, Void>() {
                 @Override
                 protected Void doInBackground(Void... params) {
+
                     ContentValues values = new ContentValues();
+
                     values.put(MessagesTable.COLUMN_RECEIVER, mContactId);
                     values.put(MessagesTable.COLUMN_SENDER, 0);
                     values.put(MessagesTable.COLUMN_CONTENT, message);
                     values.put(MessagesTable.COLUMN_SENT, MessagesTable.UNSENT);
+                    values.put(MessagesTable.COLUMN_SEQNUM, Util.uniqueSequenceNumber(getApplicationContext()));
+
                     getContentResolver().insert(DatabaseProvider.MESSAGES_URI, values);
+
                     return null;
                 }
             }.execute();

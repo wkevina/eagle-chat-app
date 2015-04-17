@@ -100,6 +100,7 @@ public class AddContactActivity extends PeregrineActivity {
                 EagleChatConfiguration.validateNodeId(idHex);
 
         if (isFilledOut) {
+            Log.d(TAG, "Validated inputs.");
 
             mPublicKey = Util.stripSeparators(pubHex);
 
@@ -107,6 +108,8 @@ public class AddContactActivity extends PeregrineActivity {
             byte[] idBytes = Util.hexStringToBytes(Util.padHex(idHex, 4));
 
             mScanButton.setText("Fingerprint: " + Util.fingerprint(pubKeyBytes, idBytes));
+        } else {
+            Log.d(TAG, "Invalid inputs.");
         }
     }
 

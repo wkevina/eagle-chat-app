@@ -1,9 +1,5 @@
 package eaglechat.eaglechat;
 
-import android.content.ContentValues;
-import android.content.Context;
-import android.database.Cursor;
-import android.os.AsyncTask;
 import android.os.Handler;
 import android.util.Log;
 
@@ -17,9 +13,7 @@ import org.jdeferred.Promise;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.LinkedBlockingDeque;
 
 /**
  * Created by kevinward on 4/10/15.
@@ -119,7 +113,7 @@ public class Peregrine {
             if (currentMessage.matches(MSG_RECD)) {
                 // we have a message from another node!
                 Log.d(TAG, "Message received!");
-                handleReceivedMessage(currentMessage);
+                mManager.handleReceivedMessage(currentMessage);
                 continue;
             }
 
@@ -154,61 +148,6 @@ public class Peregrine {
 
             }
         }
-    }
-
-    private void handleReceivedMessage(String msg) {
-        (new AsyncTask<String,Void,Void>() {
-
-            @Override
-            protected Void doInBackground(String... params) {
-                if (params.length < 1)
-                    return null;
-
-                String[] chunks = params[0].split(DELIM);
-
-                if (chunks.length < 3)
-                    return null;
-
-                String sourceIdHex = chunks[1];
-                String content = chunks[2];
-
-                String[] proj = {ContactsTable.COLUMN_ID, ContactsTable.COLUMN_NODE_ID};
-
-                Cursor contactCursor = mManager
-                        .getContentResolver()
-                        .query(DatabaseProvider.CONTACTS_URI, proj,
-                                ContactsTable.COLUMN_NODE_ID + " = ?", new String[]{sourceIdHex},
-                                null);
-
-                if (contactCursor.moveToNext()) {
-                    // sanity check
-                    int nodeIdIndex = contactCursor.getColumnIndex(ContactsTable.COLUMN_NODE_ID);
-                    int contactIndex = contactCursor.getColumnIndex(ContactsTable.COLUMN_ID);
-
-                    String contactIdHex = contactCursor.getString(nodeIdIndex);
-
-                    if (!sourceIdHex.equals(contactIdHex)) {
-                        Log.d(TAG, "Sender not found in contacts.");
-                        Log.d(TAG, "Received: " + params[0]);
-                        return null;
-                    }
-
-                    long contactId = contactCursor.getInt(contactIndex);
-
-                    ContentValues values = new ContentValues();
-                    values.put(MessagesTable.COLUMN_RECEIVER, 0);
-                    values.put(MessagesTable.COLUMN_SENDER, contactId);
-                    values.put(MessagesTable.COLUMN_CONTENT, content);
-                    values.put(MessagesTable.COLUMN_SENT, MessagesTable.SENT);
-                    mManager.getContentResolver().insert(DatabaseProvider.MESSAGES_URI, values);
-
-                    Log.d(TAG, "Stored message.");
-
-                }
-
-                return null;
-            }
-        }).execute(msg);
     }
 
 

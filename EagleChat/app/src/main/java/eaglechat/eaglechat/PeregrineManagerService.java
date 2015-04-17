@@ -18,7 +18,9 @@ import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
 import android.support.v4.content.LocalBroadcastManager;
+import android.text.TextUtils;
 import android.util.Log;
+import android.util.Pair;
 import android.widget.Toast;
 
 import com.hoho.android.usbserial.driver.CdcAcmSerialDriver;
@@ -34,6 +36,7 @@ import org.jdeferred.impl.DeferredObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
@@ -47,7 +50,33 @@ public class PeregrineManagerService extends Service {
     public static final String SERVICE_AVAILABLE = TAG + ".SERVICE_AVAILABLE";
     public static final String SERVICE_DISCONNECTED = TAG + ".SERVICE_DISCONNECTED";
     public static String BURN = TAG + ".BURN";
+    private final SerialInputOutputManager.Listener mListener =
+            new SerialInputOutputManager.Listener() {
+                @Override
+                public void onRunError(Exception e) {
+                    Log.d(TAG, "Runner stopped.");
+                }
 
+                @Override
+                public void onNewData(final byte[] data) {
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            PeregrineManagerService.this.updateReceivedData(data);
+                        }
+                    });
+                }
+            };
+    public static boolean isConnected = false;
+    private final IBinder mBinder = new PeregrineBinder();
+    private final ExecutorService mExecutor = Executors.newSingleThreadExecutor();
+    UsbDevice mUsbDevice;
+    Handler mHandler;
+    Hashtable<Pair<Integer, String>, String> mSeqNumMap = new Hashtable<>();
+    private UsbManager mUsbManager;
+    private SerialInputOutputManager mSerialIoManager;
+    private UsbSerialPort mPort;
+    private Peregrine mPeregrine;
     BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -74,33 +103,6 @@ public class PeregrineManagerService extends Service {
             }
         }
     };
-    private final SerialInputOutputManager.Listener mListener =
-            new SerialInputOutputManager.Listener() {
-                @Override
-                public void onRunError(Exception e) {
-                    Log.d(TAG, "Runner stopped.");
-                }
-
-                @Override
-                public void onNewData(final byte[] data) {
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            PeregrineManagerService.this.updateReceivedData(data);
-                        }
-                    });
-                }
-            };
-    public static boolean isConnected = false;
-    private final IBinder mBinder = new PeregrineBinder();
-    private final ExecutorService mExecutor = Executors.newSingleThreadExecutor();
-    UsbDevice mUsbDevice;
-    Handler mHandler;
-
-    private UsbManager mUsbManager;
-    private SerialInputOutputManager mSerialIoManager;
-    private UsbSerialPort mPort;
-    private Peregrine mPeregrine;
     private SendManager mSendManager;
 
     public PeregrineManagerService() {
@@ -271,6 +273,122 @@ public class PeregrineManagerService extends Service {
         }
     }
 
+    void handleReceivedMessage(String msg) {
+        (new AsyncTask<String, Void, Void>() {
+
+            @Override
+            protected Void doInBackground(String... params) {
+                if (params.length < 1)
+                    return null;
+
+                String[] chunks = params[0].split(Peregrine.DELIM);
+
+                if (chunks.length < 3)
+                    return null;
+
+                String sourceIdHex = chunks[1];
+
+                String content;
+                Integer seqNum = null;
+
+                String encoded;
+
+                if (chunks.length > 3) {
+
+                    String[] sub = Arrays.copyOfRange(chunks, 2, chunks.length);
+
+                    encoded = TextUtils.join(Peregrine.DELIM, sub);
+                } else {
+
+                    encoded = chunks[2];
+                }
+
+                try {
+
+                    EagleChatConfiguration.DecodedMessage decodedMessage =
+                            new EagleChatConfiguration.DecodedMessage(encoded);
+
+                    content = decodedMessage.content;
+                    seqNum = decodedMessage.seqNum;
+
+                } catch (IllegalArgumentException ex) {
+
+                    Log.d(TAG, ex.toString());
+
+                    content = chunks[2];
+                }
+
+                if (seqNum == null) {
+
+                    Log.d(TAG, "Received message without sequence number.");
+                    Log.d(TAG, "Skipping message.");
+                    Log.d(TAG, "Message content = " + content);
+
+                    return null;
+
+                } else {
+
+                    Pair<Integer, String> p = new Pair<>(seqNum, sourceIdHex);
+
+                    // Check if we have seen this sequence number from this sender before
+                    if (mSeqNumMap.containsKey(p)) {
+
+                        // We have seen it. Are the contents the same?
+                        if (mSeqNumMap.get(p).equals(content)) {
+
+                            // we have seen this message before, ignore it
+                            Log.d(TAG, "Received duplicate message. Skipping.");
+                            return null;
+                        }
+                    }
+
+                    // Store this message, indexed by seqNum and sourceId
+                    mSeqNumMap.put(p, content);
+                }
+
+
+                String[] proj = {ContactsTable.COLUMN_ID, ContactsTable.COLUMN_NODE_ID};
+
+                Cursor contactCursor =
+                        getContentResolver()
+                                .query(DatabaseProvider.CONTACTS_URI, proj,
+                                        ContactsTable.COLUMN_NODE_ID + " = ?", new String[]{sourceIdHex},
+                                        null);
+
+                if (contactCursor.moveToNext()) {
+                    // sanity check
+                    int nodeIdIndex = contactCursor.getColumnIndex(ContactsTable.COLUMN_NODE_ID);
+                    int contactIndex = contactCursor.getColumnIndex(ContactsTable.COLUMN_ID);
+
+                    String contactIdHex = contactCursor.getString(nodeIdIndex);
+
+                    if (!sourceIdHex.equals(contactIdHex)) {
+                        Log.d(TAG, "Sender not found in contacts.");
+                        Log.d(TAG, "Received: " + params[0]);
+                        return null;
+                    }
+
+                    long contactId = contactCursor.getInt(contactIndex);
+
+                    ContentValues values = new ContentValues();
+                    values.put(MessagesTable.COLUMN_RECEIVER, 0);
+                    values.put(MessagesTable.COLUMN_SENDER, contactId);
+                    values.put(MessagesTable.COLUMN_CONTENT, content);
+                    values.put(MessagesTable.COLUMN_SENT, MessagesTable.SENT);
+                    values.put(MessagesTable.COLUMN_SEQNUM, seqNum);
+                    getContentResolver().insert(DatabaseProvider.MESSAGES_URI, values);
+
+                    Log.d(TAG, "Stored message.");
+
+                }
+
+                contactCursor.close();
+
+                return null;
+            }
+        }).execute(msg);
+    }
+
     public class PeregrineBinder extends Binder {
         Peregrine getService() {
             return mPeregrine;
@@ -281,7 +399,8 @@ public class PeregrineManagerService extends Service {
 
         private final String[] msgProj =
                 {MessagesTable.COLUMN_ID, MessagesTable.COLUMN_RECEIVER,
-                        MessagesTable.COLUMN_CONTENT, MessagesTable.COLUMN_SENT};
+                        MessagesTable.COLUMN_CONTENT, MessagesTable.COLUMN_SENT,
+                        MessagesTable.COLUMN_SEQNUM};
         private final String[] contactProj =
                 {ContactsTable.COLUMN_ID, ContactsTable.COLUMN_NODE_ID, ContactsTable.COLUMN_PUBLIC_KEY};
         Cursor mCursor;
@@ -303,7 +422,7 @@ public class PeregrineManagerService extends Service {
             started = true;
         }
 
-        private void queryAndSend() {
+        synchronized private void queryAndSend() {
             Log.d(TAG, "queryAndSend");
             if (mBusySending)
                 return;
@@ -329,13 +448,18 @@ public class PeregrineManagerService extends Service {
             int recIndex = mCursor.getColumnIndex(MessagesTable.COLUMN_RECEIVER); // contact id for dest
             int contentIndex = mCursor.getColumnIndex(MessagesTable.COLUMN_CONTENT);
             int sentIndex = mCursor.getColumnIndex(MessagesTable.COLUMN_SENT);
+            int seqNumIndex = mCursor.getColumnIndex(MessagesTable.COLUMN_SEQNUM);
+
+            Log.d(TAG, "seqNumIndex = " + seqNumIndex);
 
             List<SendWrapper> wrapperList = new ArrayList<>();
             while (mCursor.moveToNext()) {
                 // sanity check
                 int sent = mCursor.getInt(sentIndex);
-                if (sent == MessagesTable.SENT)
+                if (sent == MessagesTable.SENT) {
+                    Log.d(TAG, "Message already sent.");
                     continue;
+                }
 
                 int msgId = mCursor.getInt(msgIndex); // id of this row
 
@@ -371,12 +495,14 @@ public class PeregrineManagerService extends Service {
                 }
 
                 String content = mCursor.getString(contentIndex);
+                Integer seqNum = mCursor.getInt(seqNumIndex);
 
                 SendWrapper wrapper = new SendWrapper();
 
                 wrapper.nodeId = recNodeId;
                 wrapper.publicKey = publicKey;
-                wrapper.content = content;
+                // Encode message content before sending
+                wrapper.content = EagleChatConfiguration.formatMessage(content, seqNum);
                 wrapper.msgId = msgId;
 
                 wrapperList.add(wrapper);
