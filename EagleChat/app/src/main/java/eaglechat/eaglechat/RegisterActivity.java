@@ -156,12 +156,12 @@ public class RegisterActivity extends PeregrineActivity {
 
         editor.putString(Util.NAME, mName).apply();
 
-        mHandler.postDelayed(new Runnable() {
+        mHandler.post(new Runnable() {
             @Override
             public void run() {
                 Util.restart(RegisterActivity.this);
             }
-        }, 100);
+        });
     }
 
 
