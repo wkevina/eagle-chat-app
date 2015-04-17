@@ -23,8 +23,6 @@ import com.melnykov.fab.FloatingActionButton;
 import org.jdeferred.DoneCallback;
 import org.spongycastle.util.encoders.Base64;
 
-// TODO: SEND PUBLIC KEY TO BOARD ON CONTACT ADD
-
 
 public class AddContactActivity extends PeregrineActivity {
     public static final String TAG = "eaglechat.eaglechat";
