@@ -88,10 +88,6 @@ public class RegisterActivity extends PeregrineActivity {
             mName = name;
 
             commitConfiguration(networkIdString, passwordHash);
-
-            //writeData(name, networkIdString, mPublicKey);
-            //Util.restart(this);
-            //finish();
         }
 
     }
@@ -172,6 +168,7 @@ public class RegisterActivity extends PeregrineActivity {
         return true;
     }
 
+
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle action bar item clicks here. The action bar will
@@ -180,22 +177,6 @@ public class RegisterActivity extends PeregrineActivity {
         int id = item.getItemId();
 
         return super.onOptionsItemSelected(item);
-    }
-
-    private void dummyEncryptionSetup() {
-        byte[] publicKey = new byte[32];
-
-        SecureRandom r = new SecureRandom(new byte[]{0x10, 0x02, 0x03, 0x04});
-        r.nextBytes(publicKey);
-
-        if (mNetworkIdText.getText().toString().isEmpty()) { // If no id has been supplied by the user
-            byte[] networkId = new byte[2];
-            r.nextBytes(networkId);
-            mNetworkIdText.setText(Util.bytesToString(networkId, ""));
-        }
-
-        mKeyLabel.setText(Util.bytesToString(publicKey, " "));
-        mPublicKey = Base64.toBase64String(publicKey);
     }
 
 }
