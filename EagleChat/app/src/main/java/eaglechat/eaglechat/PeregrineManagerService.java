@@ -18,7 +18,6 @@ import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
 import android.support.v4.content.LocalBroadcastManager;
-import android.text.TextUtils;
 import android.util.Log;
 import android.util.Pair;
 import android.widget.Toast;
@@ -36,12 +35,13 @@ import org.jdeferred.impl.DeferredObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import eaglechat.eaglechat.EagleChatConfiguration.DecodedMessage;
 
 public class PeregrineManagerService extends Service {
 
@@ -72,7 +72,17 @@ public class PeregrineManagerService extends Service {
     private final ExecutorService mExecutor = Executors.newSingleThreadExecutor();
     UsbDevice mUsbDevice;
     Handler mHandler;
+
     Hashtable<Pair<Integer, String>, String> mSeqNumMap = new Hashtable<>();
+
+    // Map that holds information about unresolved ack requests
+    // Format is
+    /*
+        key = <(sequence number),(hexId)>
+        value = <msg id>
+     */
+    Hashtable<Pair<Integer, String>, Pair<Integer,Runnable>> mAckMap = new Hashtable<>();
+
     private UsbManager mUsbManager;
     private SerialInputOutputManager mSerialIoManager;
     private UsbSerialPort mPort;
@@ -181,6 +191,10 @@ public class PeregrineManagerService extends Service {
         mHandler.post(runnable);
     }
 
+    private void runOnUiThreadDelayed(Runnable runnable, long millis) {
+        mHandler.postDelayed(runnable, millis);
+    }
+
     private void onHasPort(UsbSerialDriver driver) {
         UsbSerialPort port = driver.getPorts().get(0);
         UsbDeviceConnection connection = mUsbManager.openDevice(driver.getDevice());
@@ -281,70 +295,45 @@ public class PeregrineManagerService extends Service {
                 if (params.length < 1)
                     return null;
 
-                String[] chunks = params[0].split(Peregrine.DELIM);
-
-                if (chunks.length < 3)
-                    return null;
-
-                String sourceIdHex = chunks[1];
-
-                String content;
-                Integer seqNum = null;
-
-                String encoded;
-
-                if (chunks.length > 3) {
-
-                    String[] sub = Arrays.copyOfRange(chunks, 2, chunks.length);
-
-                    encoded = TextUtils.join(Peregrine.DELIM, sub);
-                } else {
-
-                    encoded = chunks[2];
-                }
+                DecodedMessage dm;
 
                 try {
-
-                    EagleChatConfiguration.DecodedMessage decodedMessage =
-                            new EagleChatConfiguration.DecodedMessage(encoded);
-
-                    content = decodedMessage.content;
-                    seqNum = decodedMessage.seqNum;
-
+                    dm = new DecodedMessage(params[0]);
                 } catch (IllegalArgumentException ex) {
-
-                    Log.d(TAG, ex.toString());
-
-                    content = chunks[2];
-                }
-
-                if (seqNum == null) {
-
-                    Log.d(TAG, "Received message without sequence number.");
-                    Log.d(TAG, "Skipping message.");
-                    Log.d(TAG, "Message content = " + content);
-
+                    Log.d(TAG, "Error decoding message.");
+                    Log.e(TAG, ex.toString());
                     return null;
-
-                } else {
-
-                    Pair<Integer, String> p = new Pair<>(seqNum, sourceIdHex);
-
-                    // Check if we have seen this sequence number from this sender before
-                    if (mSeqNumMap.containsKey(p)) {
-
-                        // We have seen it. Are the contents the same?
-                        if (mSeqNumMap.get(p).equals(content)) {
-
-                            // we have seen this message before, ignore it
-                            Log.d(TAG, "Received duplicate message. Skipping.");
-                            return null;
-                        }
-                    }
-
-                    // Store this message, indexed by seqNum and sourceId
-                    mSeqNumMap.put(p, content);
                 }
+
+
+                // We now have a decoded packet with a sequence number and type
+
+
+                // If this is an ACK message, handle it separately and return
+                if (dm.type == EagleChatConfiguration.ACK) {
+                    handleAck(dm);
+                    return null;
+                } else { // Otherwise, acknowledge reception, even if we have seen it before
+                    sendAck(dm);
+                }
+
+                // Message is content
+                Pair<Integer, String> p = new Pair<>(dm.seqNum, dm.hexId);
+
+                // Check if we have seen this sequence number from this sender before
+                if (mSeqNumMap.containsKey(p)) {
+
+                    // We have seen it. Are the contents the same?
+                    if (mSeqNumMap.get(p).equals(dm.content)) {
+
+                        // we have seen this message before, ignore it
+                        Log.d(TAG, "Received duplicate message. Skipping.");
+                        return null;
+                    }
+                }
+
+                // Store this message, indexed by seqNum and sourceId
+                mSeqNumMap.put(p, dm.content);
 
 
                 String[] proj = {ContactsTable.COLUMN_ID, ContactsTable.COLUMN_NODE_ID};
@@ -352,7 +341,7 @@ public class PeregrineManagerService extends Service {
                 Cursor contactCursor =
                         getContentResolver()
                                 .query(DatabaseProvider.CONTACTS_URI, proj,
-                                        ContactsTable.COLUMN_NODE_ID + " = ?", new String[]{sourceIdHex},
+                                        ContactsTable.COLUMN_NODE_ID + " = ?", new String[]{dm.hexId},
                                         null);
 
                 if (contactCursor.moveToNext()) {
@@ -362,7 +351,7 @@ public class PeregrineManagerService extends Service {
 
                     String contactIdHex = contactCursor.getString(nodeIdIndex);
 
-                    if (!sourceIdHex.equals(contactIdHex)) {
+                    if (!dm.hexId.equals(contactIdHex)) {
                         Log.d(TAG, "Sender not found in contacts.");
                         Log.d(TAG, "Received: " + params[0]);
                         return null;
@@ -373,9 +362,9 @@ public class PeregrineManagerService extends Service {
                     ContentValues values = new ContentValues();
                     values.put(MessagesTable.COLUMN_RECEIVER, 0);
                     values.put(MessagesTable.COLUMN_SENDER, contactId);
-                    values.put(MessagesTable.COLUMN_CONTENT, content);
+                    values.put(MessagesTable.COLUMN_CONTENT, dm.content);
                     values.put(MessagesTable.COLUMN_SENT, MessagesTable.SENT);
-                    values.put(MessagesTable.COLUMN_SEQNUM, seqNum);
+                    values.put(MessagesTable.COLUMN_SEQNUM, dm.seqNum);
                     getContentResolver().insert(DatabaseProvider.MESSAGES_URI, values);
 
                     Log.d(TAG, "Stored message.");
@@ -387,6 +376,49 @@ public class PeregrineManagerService extends Service {
                 return null;
             }
         }).execute(msg);
+    }
+
+    private void sendAck(final DecodedMessage dm) {
+
+        final String content = EagleChatConfiguration.formatMessage("ACK", dm.seqNum, EagleChatConfiguration.ACK);
+
+        final Deferred ackDeferred = new DeferredObject();
+
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Log.d(TAG, "Main thread, running sendmessage");
+                mSendManager.sendMessage(ackDeferred, Integer.parseInt(dm.hexId, 16), content);
+            }
+        });
+
+        try {
+            ackDeferred.waitSafely();
+        } catch (InterruptedException ex) {
+
+        }
+
+        if (ackDeferred.isResolved()) {
+            Log.d(TAG, String.format("Sent ack to node = %s for message # %d", dm.hexId, dm.seqNum));
+            Toast.makeText(this,
+                    String.format("Sent ack to node = %s for message # %d", dm.hexId, dm.seqNum),
+                    Toast.LENGTH_SHORT)
+                    .show();
+        }
+
+    }
+
+    private void handleAck(DecodedMessage dm) {
+        // Check mAckMap
+
+        Pair<Integer, String> key = new Pair<>(dm.seqNum, dm.hexId);
+
+        if (mAckMap.containsKey(key)) {
+            mHandler.removeCallbacks(mAckMap.get(key).second);
+            mAckMap.remove(key);
+            Log.d(TAG, String.format("Received ack for seqNum = %d from nodeId = %s", dm.seqNum, dm.hexId));
+            Toast.makeText(this, "Message arrived at destination", Toast.LENGTH_SHORT).show();
+        }
     }
 
     public class PeregrineBinder extends Binder {
@@ -502,8 +534,14 @@ public class PeregrineManagerService extends Service {
                 wrapper.nodeId = recNodeId;
                 wrapper.publicKey = publicKey;
                 // Encode message content before sending
-                wrapper.content = EagleChatConfiguration.formatMessage(content, seqNum);
+                wrapper.content = EagleChatConfiguration.formatMessage(content, seqNum, EagleChatConfiguration.TEXT);
                 wrapper.msgId = msgId;
+
+                // Note that we are waiting for an ack on this message
+                Pair<Integer, String> ackKey = new Pair<>(seqNum, wrapper.nodeId);
+
+
+                mAckMap.put(ackKey, new Pair(wrapper.msgId, startAckTimeout(wrapper.msgId)));
 
                 wrapperList.add(wrapper);
 
@@ -526,7 +564,7 @@ public class PeregrineManagerService extends Service {
                             @Override
                             public void run() {
                                 Log.d(TAG, "Main thread, running sendmessage");
-                                sendMessage(sendDeferred, Integer.parseInt(w.nodeId, 16), w.publicKey, w.content, w.msgId);
+                                sendMessage(sendDeferred, Integer.parseInt(w.nodeId, 16), w.content);
                             }
                         });
 
@@ -563,7 +601,7 @@ public class PeregrineManagerService extends Service {
                                     @Override
                                     public void run() {
                                         Log.d(TAG, "Main thread, running sendmessage");
-                                        sendMessage(resendDeferred, Integer.parseInt(w.nodeId, 16), w.publicKey, w.content, w.msgId);
+                                        sendMessage(resendDeferred, Integer.parseInt(w.nodeId, 16), w.content);
                                     }
                                 });
 
@@ -574,14 +612,14 @@ public class PeregrineManagerService extends Service {
                                 }
                                 if (resendDeferred.isResolved()) {
                                     Log.d(TAG, "Sent 1 message.");
-                                    markMessageSent(w.msgId);
+                                    markMessage(w.msgId, true);
                                 }
                             } else {
                                 Log.d(TAG, "Something else happened.");
                             }
                         } else {
                             Log.d(TAG, "Sent 1 message.");
-                            markMessageSent(w.msgId);
+                            markMessage(w.msgId, true);
                         }
 
                     }
@@ -595,7 +633,21 @@ public class PeregrineManagerService extends Service {
 
         }
 
-        private void markMessageSent(long msgId) {
+        private Runnable startAckTimeout(final long msgId) {
+
+            Runnable r = new Runnable() {
+                @Override
+                public void run() {
+                    markMessage(msgId, false);
+                }
+            };
+
+            runOnUiThreadDelayed(r, 5000);
+
+            return r;
+        }
+
+        private void markMessage(long msgId, boolean markSent) {
 
             Uri msgUri = ContentUris.withAppendedId(DatabaseProvider.MESSAGES_URI, msgId);
 
@@ -605,7 +657,7 @@ public class PeregrineManagerService extends Service {
             //getContentResolver().
         }
 
-        private void sendMessage(final Deferred outerDeferred, final int nodeId, final String publicKey, final String content, final int messageId) {
+        private void sendMessage(final Deferred outerDeferred, final int nodeId, final String content) {
 
 
             Log.d(TAG, "== 383 == commandSendMessage");
