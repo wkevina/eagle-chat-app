@@ -5,9 +5,11 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -190,7 +192,30 @@ public class MainActivity extends PeregrineActivity {
         findViewById(R.id.passwordScreen).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                submitPassword(v);
+                clearKeyboard(v);
+                submitPassword();
+            }
+        });
+
+
+        mPasswordText.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View v, boolean hasFocus) {
+                if (!hasFocus) {
+                    clearKeyboard(v);
+                    submitPassword();
+                }
+            }
+        });
+
+        mPasswordText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+            @Override
+            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
+                if (actionId == EditorInfo.IME_ACTION_DONE) {
+                    clearKeyboard(v);
+                    submitPassword();
+                }
+                return false;
             }
         });
 
@@ -223,9 +248,7 @@ public class MainActivity extends PeregrineActivity {
         */
     }
 
-    private void submitPassword(View v) {
-
-        clearKeyboard(v);
+    private void submitPassword() {
 
         String pwd = mPasswordText.getText().toString();
         if (EagleChatConfiguration.validatePassword(pwd)) {
@@ -252,10 +275,20 @@ public class MainActivity extends PeregrineActivity {
     }
 
     private void clearKeyboard(View v) {
-        InputMethodManager imm = (InputMethodManager) v.getContext()
-                .getSystemService(Context.INPUT_METHOD_SERVICE);
+        View focused = getCurrentFocus();
 
-        imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
+        if (focused != null) {
+
+            InputMethodManager imm = (InputMethodManager) focused.getContext()
+                    .getSystemService(Context.INPUT_METHOD_SERVICE);
+
+            imm.hideSoftInputFromWindow(focused.getWindowToken(), 0);
+        } else {
+            InputMethodManager imm = (InputMethodManager) v.getContext()
+                    .getSystemService(Context.INPUT_METHOD_SERVICE);
+
+            imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
+        }
     }
 
 
