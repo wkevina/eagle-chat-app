@@ -81,12 +81,13 @@ public class PeregrineManagerService extends Service {
         key = <(sequence number),(hexId)>
         value = <msg id>
      */
-    Hashtable<Pair<Integer, String>, Pair<Integer,Runnable>> mAckMap = new Hashtable<>();
+    Hashtable<Pair<Integer, String>, Pair<Integer, Runnable>> mAckMap = new Hashtable<>();
 
     private UsbManager mUsbManager;
     private SerialInputOutputManager mSerialIoManager;
     private UsbSerialPort mPort;
     private Peregrine mPeregrine;
+    private SendManager mSendManager;
     BroadcastReceiver mReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -101,7 +102,19 @@ public class PeregrineManagerService extends Service {
                 Intent disconnected = new Intent(SERVICE_DISCONNECTED);
                 LocalBroadcastManager.getInstance(PeregrineManagerService.this).sendBroadcastSync(disconnected);
 
+
+
                 stopIoManager();
+
+                mSendManager.stop();
+
+                if (mPeregrine != null) {
+                    mPeregrine.stop();
+                }
+
+                mPeregrine = null;
+
+                mSendManager = null;
 
                 stopSelf();
             }
@@ -113,7 +126,6 @@ public class PeregrineManagerService extends Service {
             }
         }
     };
-    private SendManager mSendManager;
 
     public PeregrineManagerService() {
 
@@ -449,9 +461,19 @@ public class PeregrineManagerService extends Service {
 
         public void start() {
             if (!started) {
+                getContentResolver().registerContentObserver(DatabaseProvider.MESSAGES_UNSENT_URI, false, mObserver);
                 queryAndSend();
             }
             started = true;
+
+        }
+
+        public void stop() {
+            getContentResolver().unregisterContentObserver(mObserver);
+
+            for (Pair<Integer, Runnable> p : mAckMap.values()) {
+                mHandler.removeCallbacks(p.second);
+            }
         }
 
         synchronized private void queryAndSend() {
@@ -465,7 +487,7 @@ public class PeregrineManagerService extends Service {
 
             if (mPeregrine == null) {
                 Log.d(TAG, "queryAndSend, board unavailable");
-
+                return;
                 //Toast.makeText(PeregrineManagerService.this, "EagleChat device unavailable", Toast.LENGTH_SHORT)
                 //        .show();
             }
@@ -474,7 +496,6 @@ public class PeregrineManagerService extends Service {
             mCursor = getContentResolver().query(
                     DatabaseProvider.MESSAGES_UNSENT_URI,
                     msgProj, null, null, null);
-            mCursor.registerContentObserver(mObserver);
 
             int msgIndex = mCursor.getColumnIndex(MessagesTable.COLUMN_ID);
             int recIndex = mCursor.getColumnIndex(MessagesTable.COLUMN_RECEIVER); // contact id for dest
@@ -638,6 +659,7 @@ public class PeregrineManagerService extends Service {
             Runnable r = new Runnable() {
                 @Override
                 public void run() {
+                    Toast.makeText(getApplicationContext(), "Message did not reach destination", Toast.LENGTH_SHORT).show();
                     markMessage(msgId, false);
                 }
             };
@@ -652,7 +674,7 @@ public class PeregrineManagerService extends Service {
             Uri msgUri = ContentUris.withAppendedId(DatabaseProvider.MESSAGES_URI, msgId);
 
             ContentValues values = new ContentValues();
-            values.put(MessagesTable.COLUMN_SENT, MessagesTable.SENT);
+            values.put(MessagesTable.COLUMN_SENT, markSent ? MessagesTable.SENT : MessagesTable.UNSENT);
             getContentResolver().update(msgUri, values, null, null);
             //getContentResolver().
         }

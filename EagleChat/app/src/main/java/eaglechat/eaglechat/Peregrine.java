@@ -52,14 +52,15 @@ public class Peregrine {
     // get public key g:p:[32 bytes]    ^g:p:.{32}
     protected final Queue<String> mInputQueue;
     protected final Deque<MessageResolver> mResolverQueue;
-    final Handler mHandler = new Handler();
-    private final PeregrineManagerService mManager;
+
+    public void stop() {
+        mManager = null;
+        mSerial = null;
+    }
+
+    private PeregrineManagerService mManager;
     protected String buffer;
     protected SerialInputOutputManager mSerial;
-
-    protected Deferred<String, String, String> mDeferred; // The current promise waiting to be resolved
-    protected MessageResolver mResolver;
-    private int statusCount = 0;
 
     public Peregrine(PeregrineManagerService manager, SerialInputOutputManager serial) {
         mManager = manager;

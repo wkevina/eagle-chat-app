@@ -289,6 +289,8 @@ public class DatabaseProvider extends ContentProvider {
                     selectionArgs);
 
         }
+        getContext().getContentResolver().notifyChange(MESSAGES_UNSENT_URI, null);
+
         return rowsUpdated;
     }
 }
