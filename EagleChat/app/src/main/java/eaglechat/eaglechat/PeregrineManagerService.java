@@ -49,7 +49,9 @@ public class PeregrineManagerService extends Service {
 
     public static final String SERVICE_AVAILABLE = TAG + ".SERVICE_AVAILABLE";
     public static final String SERVICE_DISCONNECTED = TAG + ".SERVICE_DISCONNECTED";
-    public static String BURN = TAG + ".BURN";
+    public static final String BURN = TAG + ".BURN";
+    public static final String AUTHENTICATED = TAG + ".AUTHENTICATED";
+
     private final SerialInputOutputManager.Listener mListener =
             new SerialInputOutputManager.Listener() {
                 @Override
@@ -103,7 +105,6 @@ public class PeregrineManagerService extends Service {
                 LocalBroadcastManager.getInstance(PeregrineManagerService.this).sendBroadcastSync(disconnected);
 
 
-
                 stopIoManager();
 
                 mSendManager.stop();
@@ -123,6 +124,10 @@ public class PeregrineManagerService extends Service {
                 if (mPeregrine != null) {
                     mPeregrine.commandBurn();
                 }
+            }
+
+            if (action.equals(AUTHENTICATED)) {
+                startSendManager();
             }
         }
     };
@@ -149,11 +154,13 @@ public class PeregrineManagerService extends Service {
         super.onCreate();
         mHandler = new Handler();
 
+        LocalBroadcastManager b = LocalBroadcastManager.getInstance(this);
 
-        LocalBroadcastManager.getInstance(this).registerReceiver(mReceiver,
-                new IntentFilter(DeviceConnectionReceiver.DEVICE_DETACHED));
-        LocalBroadcastManager.getInstance(this).registerReceiver(mReceiver,
-                new IntentFilter(BURN));
+        b.registerReceiver(mReceiver, new IntentFilter(DeviceConnectionReceiver.DEVICE_DETACHED));
+
+        b.registerReceiver(mReceiver, new IntentFilter(BURN));
+
+        b.registerReceiver(mReceiver, new IntentFilter(AUTHENTICATED));
     }
 
     @Override

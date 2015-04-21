@@ -1,12 +1,15 @@
 package eaglechat.eaglechat;
 
+import android.content.Intent;
 import android.os.Handler;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import com.hoho.android.usbserial.util.SerialInputOutputManager;
 
 import org.jdeferred.AlwaysCallback;
 import org.jdeferred.Deferred;
+import org.jdeferred.DoneCallback;
 import org.jdeferred.DoneFilter;
 import org.jdeferred.Promise;
 
@@ -453,6 +456,13 @@ public class Peregrine {
 //                Log.d(TAG, "Skipping message.");
 
                 return SKIP;
+            }
+        }).then(new DoneCallback<String>() {
+            @Override
+            public void onDone(String result) {
+                LocalBroadcastManager
+                        .getInstance(mManager)
+                        .sendBroadcast(new Intent(PeregrineManagerService.AUTHENTICATED));
             }
         });
 

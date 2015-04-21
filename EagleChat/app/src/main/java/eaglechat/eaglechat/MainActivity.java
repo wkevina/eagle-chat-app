@@ -136,25 +136,19 @@ public class MainActivity extends PeregrineActivity {
         int ourNodeId = prefs.getInt(Util.NODE_ID, 255);
 
 
-        if ( (ourNodeId == 255 || ourPublicKey.isEmpty())
-                || !(ourPublicKey.contentEquals(mPublicKey) && ourNodeId == mNodeId) ) {
+        if ((ourNodeId == 255 || ourPublicKey.isEmpty())
+                || !(ourPublicKey.contentEquals(mPublicKey) && ourNodeId == mNodeId)) {
             // We have never had a board connected before or this is a new board
             // Don't delete anything, just update info
             prefs.edit()
                     .putString(Util.PUBLIC_KEY, mPublicKey)
                     .putInt(Util.NODE_ID, mNodeId)
-                .apply();
+                    .apply();
 
         }
 
         Log.d(TAG, "done saving");
 
-
-        if (peregrineAvailable()) {
-            Log.d(TAG, "starting send manager");
-
-            getPeregrine().startSendManager();
-        }
 
         Log.d(TAG, "about to launch contacts activity");
 
