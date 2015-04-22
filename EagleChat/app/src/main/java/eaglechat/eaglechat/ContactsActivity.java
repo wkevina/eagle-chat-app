@@ -1,18 +1,23 @@
 package eaglechat.eaglechat;
 
 import android.app.LoaderManager;
+import android.content.ContentUris;
 import android.content.Context;
 import android.content.CursorLoader;
 import android.content.Intent;
 import android.content.Loader;
 import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.ActionMode;
 import android.view.LayoutInflater;
 import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AbsListView;
 import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.SimpleCursorAdapter;
@@ -53,7 +58,65 @@ public class ContactsActivity extends CompatListActivity implements LoaderManage
 
         setListShown(false, false);
 
+        setupListCAB();
+
         getLoaderManager().initLoader(0, null, this).forceLoad();
+    }
+
+    private void setupListCAB() {
+
+        final ListView listView = getListView();
+
+        listView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE_MODAL);
+
+        listView.setMultiChoiceModeListener(new AbsListView.MultiChoiceModeListener() {
+            @Override
+            public void onItemCheckedStateChanged(ActionMode mode, int position, long id, boolean checked) {
+            }
+
+            @Override
+            public boolean onCreateActionMode(ActionMode mode, Menu menu) {
+                Log.d(TAG, "onCreateActionMode called");
+
+                MenuInflater inflater = mode.getMenuInflater();
+                inflater.inflate(R.menu.menu_contacts_context, menu);
+
+                return true;
+            }
+
+            @Override
+            public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
+                return false;
+            }
+
+            @Override
+            public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
+
+                switch(item.getItemId()) {
+                    case R.id.delete:
+                        long[] ids = listView.getCheckedItemIds();
+
+                        deleteContacts(ids);
+
+                        mode.finish();
+                }
+
+                return false;
+            }
+
+            @Override
+            public void onDestroyActionMode(ActionMode mode) {
+
+            }
+        });
+
+    }
+
+    private void deleteContacts(long[] ids) {
+        for (long id : ids) {
+            Uri uri = ContentUris.withAppendedId(DatabaseProvider.CONTACTS_URI, id);
+            getContentResolver().delete(uri, null, null);
+        }
     }
 
     @Override
@@ -158,7 +221,7 @@ public class ContactsActivity extends CompatListActivity implements LoaderManage
             } else {
                 v = inflater.inflate(R.layout.list_contact_with_message, parent, false);
             }
-            v.setBackgroundResource(android.R.color.white);
+            v.setBackgroundResource(R.drawable.list_item_activated);
             return v;
         }
 
