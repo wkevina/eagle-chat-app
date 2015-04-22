@@ -1,7 +1,13 @@
 package eaglechat.eaglechat;
 
+import android.app.AlertDialog;
+import android.content.ContentUris;
 import android.content.ContentValues;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteCursor;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.util.Log;
@@ -31,6 +37,7 @@ public class AddContactActivity extends PeregrineActivity {
     FloatingActionButton mSubmitButton;
 
     String mPublicKey;
+    private boolean mIsSubmitting = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -177,6 +184,12 @@ public class AddContactActivity extends PeregrineActivity {
     }
 
     private void submit() {
+        if (mIsSubmitting) {
+            return;
+        }
+
+        mIsSubmitting = true;
+
         String contactName = mNameText.getText().toString();
         String networkId = mNetworkIdText.getText().toString();
 
@@ -202,30 +215,99 @@ public class AddContactActivity extends PeregrineActivity {
 
         if (!doesValidate) {
             Log.d(this.getLocalClassName(), "Some fields are missing. Cannot continue.");
+            mIsSubmitting = false;
         } else {
             networkId = Util.padHex(networkId, 2);
             addContact(networkId, contactName, mPublicKey);
-            if (peregrineAvailable()) {
-                getPeregrine().commandSendPublicKey(Integer.parseInt(networkId, 16), mPublicKey)
-                        .then(new DoneCallback<String>() {
-                            @Override
-                            public void onDone(String result) {
-                                finish();
-                            }
-                        });
-            } else {
-                finish();
-            }
         }
     }
 
-    private void addContact(String networkId, String contactName, String publicKey) {
-        ContentValues values = new ContentValues();
+    private void addContact(final String networkId, final String contactName, final String publicKey) {
+        // Check for existence of that networkId in the database
 
-        values.put(ContactsTable.COLUMN_NODE_ID, networkId);
-        values.put(ContactsTable.COLUMN_NAME, contactName);
-        values.put(ContactsTable.COLUMN_PUBLIC_KEY, publicKey);
-        getContentResolver().insert(DatabaseProvider.CONTACTS_URI, values);
+        String[] proj = {ContactsTable.COLUMN_ID, ContactsTable.COLUMN_NODE_ID};
+
+        Cursor contact = getContentResolver().query(
+                DatabaseProvider.CONTACTS_URI,
+                proj,
+                ContactsTable.COLUMN_NODE_ID + " = ? ",
+                new String[]{networkId}, null
+        );
+
+
+        // There is a contact with this ID already
+        if (contact.moveToNext()) {
+
+            // get id of other contact
+            int idIndex = contact.getColumnIndex(ContactsTable.COLUMN_ID);
+
+            if (idIndex == -1) {
+                Log.d(TAG, "Can't get column index for _id field of contact.");
+            }
+
+            final long duplicateId = contact.getLong(idIndex);
+
+            new AlertDialog.Builder(this)
+                    .setTitle("Contact with that ID already exists")
+                    .setMessage("Overwrite?")
+                    .setIcon(android.R.drawable.ic_dialog_alert)
+                    .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+
+                            Uri deleteUri = ContentUris.withAppendedId(DatabaseProvider.CONTACTS_URI, duplicateId);
+
+                            int rows = getContentResolver().delete(deleteUri, null, null);
+
+                            Log.d(TAG, "Contacts deleted = " + rows);
+
+                            ContentValues values = new ContentValues();
+
+                            values.put(ContactsTable.COLUMN_NODE_ID, networkId);
+                            values.put(ContactsTable.COLUMN_NAME, contactName);
+                            values.put(ContactsTable.COLUMN_PUBLIC_KEY, publicKey);
+                            getContentResolver().insert(DatabaseProvider.CONTACTS_URI, values);
+
+                            finishAddContact(networkId, publicKey);
+
+                            mIsSubmitting = false;
+                        }
+                    })
+                    .setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            mIsSubmitting = false;
+                        }
+                    })
+            .show();
+        } else {
+            ContentValues values = new ContentValues();
+
+            values.put(ContactsTable.COLUMN_NODE_ID, networkId);
+            values.put(ContactsTable.COLUMN_NAME, contactName);
+            values.put(ContactsTable.COLUMN_PUBLIC_KEY, publicKey);
+            getContentResolver().insert(DatabaseProvider.CONTACTS_URI, values);
+
+            finishAddContact(networkId, publicKey);
+
+            mIsSubmitting = false;
+
+        }
+
+    }
+
+    private void finishAddContact(String networkId, String publicKey) {
+        if (peregrineAvailable()) {
+            getPeregrine().commandSendPublicKey(Integer.parseInt(networkId, 16), mPublicKey)
+                    .then(new DoneCallback<String>() {
+                        @Override
+                        public void onDone(String result) {
+                            finish();
+                        }
+                    });
+        } else {
+            finish();
+        }
     }
 
     @Override

@@ -67,7 +67,14 @@ public class DatabaseProvider extends ContentProvider {
 
     @Override
     public int delete(Uri uri, String selection, String[] selectionArgs) {
+
         switch (sUriMatcher.match(uri)) {
+
+            case CONTACTS_ID:
+                int rows = deleteContact(uri);
+                getContext().getContentResolver().notifyChange(ALL_URI, null);
+                return rows;
+
             case ALL:
                 deleteDatabase();
                 getContext().getContentResolver().notifyChange(uri, null);
@@ -75,7 +82,20 @@ public class DatabaseProvider extends ContentProvider {
                 getContext().getContentResolver().notifyChange(CONTACTS_URI, null);
                 return 0;
         }
+
         throw new UnsupportedOperationException(String.format("Not yet implemented, delete uri=%s", uri));
+    }
+
+    private int deleteContact(Uri uri) {
+
+        long id = ContentUris.parseId(uri);
+
+        SQLiteDatabase db = mHelper.getReadableDatabase();
+
+        return db.delete(ContactsTable.TABLE_NAME,
+                ContactsTable.COLUMN_ID + " = ? ",
+                new String[]{String.valueOf(id)}
+        );
     }
 
     private void deleteDatabase() {
