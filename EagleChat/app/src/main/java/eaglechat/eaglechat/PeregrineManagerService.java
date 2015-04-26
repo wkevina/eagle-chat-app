@@ -419,10 +419,17 @@ public class PeregrineManagerService extends Service {
 
         if (ackDeferred.isResolved()) {
             Log.d(TAG, String.format("Sent ack to node = %s for message # %d", dm.hexId, dm.seqNum));
-            Toast.makeText(this,
-                    String.format("Sent ack to node = %s for message # %d", dm.hexId, dm.seqNum),
-                    Toast.LENGTH_SHORT)
-                    .show();
+
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(PeregrineManagerService.this,
+                            String.format("Sent ack to node = %s for message # %d", dm.hexId, dm.seqNum),
+                            Toast.LENGTH_SHORT)
+                            .show();
+                }
+            });
+
         }
 
     }
@@ -436,7 +443,13 @@ public class PeregrineManagerService extends Service {
             mHandler.removeCallbacks(mAckMap.get(key).second);
             mAckMap.remove(key);
             Log.d(TAG, String.format("Received ack for seqNum = %d from nodeId = %s", dm.seqNum, dm.hexId));
-            Toast.makeText(this, "Message arrived at destination", Toast.LENGTH_SHORT).show();
+
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(PeregrineManagerService.this, "Message arrived at destination", Toast.LENGTH_SHORT).show();
+                }
+            });
         }
     }
 
