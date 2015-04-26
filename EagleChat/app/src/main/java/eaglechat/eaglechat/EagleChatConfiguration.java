@@ -1,6 +1,7 @@
 package eaglechat.eaglechat;
 
 import android.util.Base64;
+import android.util.Log;
 
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
@@ -88,6 +89,7 @@ public class EagleChatConfiguration {
 
     public static String formatMessage(String content, Integer seqNum, Integer type) {
         StringBuilder sb = new StringBuilder();
+
         byte[] buf = ByteBuffer.allocate(4).putInt(seqNum).array();
 
         switch(type) {
@@ -147,6 +149,7 @@ public class EagleChatConfiguration {
 
     public static class DecodedMessage {
 
+        private static final String TAG = "eaglechat.eaglechat";
         public String hexId;
         public Integer type;
         public int seqNum;
@@ -155,12 +158,12 @@ public class EagleChatConfiguration {
         public DecodedMessage(final String encoded) {
 
             if (!encoded.startsWith("r:")) {
-                throw new IllegalArgumentException("String argument was not an encoded message. Got: " + encoded);
+                throw new IllegalArgumentException("String argument was not an encoded message. No r. Got: " + encoded);
             }
 
             String stripped = encoded.replaceFirst("r:", "");
 
-            String[] chunks = stripped.split(":", 1);
+            String[] chunks = stripped.split(":", 2);
 
             if (chunks.length < 2) {
                 throw new IllegalArgumentException("String argument was not an encoded message. Got: " + encoded);
@@ -194,16 +197,17 @@ public class EagleChatConfiguration {
                 throw new IllegalArgumentException("String argument doesn't have valid message type. Got: " + encoded);
             }
 
-
+            Log.d(TAG, "Decoding message. Remainder = " + remainder);
             if (remainder.length() < 6) // must contain at least the 6 seqNum characters
                 throw new IllegalArgumentException("String argument does not have valid base64-encoded sequence number. Got: " + encoded);
 
-            byte[] seqNumBytes = Base64.decode(encoded.substring(0, 6),
-                    Base64.NO_PADDING | Base64.NO_WRAP);
+            byte[] seqNumBytes = Base64.decode(remainder.substring(0, 6), Base64.NO_PADDING | Base64.NO_WRAP);
 
             seqNum = ByteBuffer.wrap(seqNumBytes).getInt();
 
-            content = encoded.substring(6);
+            Log.d(TAG, "SeqNum = " + seqNum);
+
+            content = remainder.substring(6);
         }
     }
 
