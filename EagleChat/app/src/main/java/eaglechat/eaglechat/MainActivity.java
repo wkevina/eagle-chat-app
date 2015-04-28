@@ -356,6 +356,12 @@ public class MainActivity extends PeregrineActivity {
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
+        if (id == R.id.action_burn) {
+            Util.burn(this);
+            finish();
+            return true;
+        }
+
         return super.onOptionsItemSelected(item);
     }
 
